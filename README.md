@@ -2,7 +2,7 @@
 
 [![macOS](https://img.shields.io/badge/macOS-Tahoe%2026.0-blue)](https://www.apple.com/macos/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.1-orange)](https://github.com/your-repo/macos-bloat-disabler/releases)
+[![Version](https://img.shields.io/badge/Version-2.1-orange)](https://github.com/manooll/Lean_Mac/releases)
 
 Is your Mac slower than it should be, heating up, or losing battery life too fast? You might be running dozens of hidden background processes—like Apple Intelligence and Spotlight AI—that eat up your resources even if you never use them.
 
