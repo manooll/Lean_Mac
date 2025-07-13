@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.disablebloatservices</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/disable_bloat_services.sh</string>
+    </array>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/pramana/Library/Logs/disable_bloat_services.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/pramana/Library/Logs/disable_bloat_services.log</string>
+    
+    <key>StartInterval</key>
+    <integer>300</integer>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>LaunchOnlyOnce</key>
+    <false/>
+</dict>
+</plist>
