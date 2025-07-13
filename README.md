@@ -2,13 +2,22 @@
 
 [![macOS](https://img.shields.io/badge/macOS-Tahoe%2026.0-blue)](https://www.apple.com/macos/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0-orange)](https://github.com/your-repo/macos-bloat-disabler/releases)
+[![Version](https://img.shields.io/badge/Version-2.1-orange)](https://github.com/your-repo/macos-bloat-disabler/releases)
 
-A comprehensive system optimization tool for macOS Tahoe 26.0 that disables unnecessary background services and processes while preserving essential system functionality.
+Is your Mac slower than it should be, heating up, or losing battery life too fast? You might be running dozens of hidden background processes—like Apple Intelligence and Spotlight AI—that eat up your resources even if you never use them.
 
-## 🚀 What This Tool Does
+This tool automatically disables over 60 unnecessary system services and background apps in macOS Tahoe 26.0, freeing up your Mac to be faster, quieter, and more private—while keeping everything you actually use, like AirDrop, Mail, and device location.
 
-This tool targets the biggest resource consumers on macOS Tahoe 26.0, including:
+## 🚀 How does it help?
+
+- **Saves battery and memory** - Stops resource-hungry processes you don't need
+- **Makes your Mac faster** - Frees up CPU for everyday work and creative tasks
+- **Protects your privacy** - Disables analytics and telemetry collection
+- **Easy to install and undo** - Simple setup with full restoration option
+
+## 🎯 What This Tool Targets
+
+This tool specifically disables the biggest resource consumers on macOS Tahoe 26.0:
 
 - **Apple Intelligence services** (new in Tahoe 26.0)
 - **Enhanced Spotlight indexing** with aggressive AI features
@@ -244,9 +253,9 @@ sudo chown $(whoami):staff ~/Library/Logs/disable_bloat_services.log
 ```
 
 ### Getting Help
-1. Check the [Issues](https://github.com/your-repo/macos-bloat-disabler/issues) page
+1. Check the [Issues](https://github.com/manooll/Lean_Mac/issues) page
 2. Review log files for error messages
-3. Join our [Discussions](https://github.com/your-repo/macos-bloat-disabler/discussions)
+3. Join our [Discussions](https://github.com/manooll/Lean_Mac/discussions)
 
 ## 🤝 Contributing
 
@@ -279,7 +288,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📈 Version History
 
-### v2.0 (Current)
+### v2.1 (Current)
+- **Enhanced Performance**: Deduplication, wildcards, and comprehensive performance metrics
+- **Shell Compatibility Fixes**: Replaced `readarray` with compatible `while` loop for system shell
+- **Variable Scope Improvements**: Fixed `local` variable usage outside functions
+- **Process Protection Logic**: Fixed Adobe process targeting (Adobe ACCFinderSync now properly eliminated)
+- **Enhanced Process Targeting**: Added Figma agents and improved process identification
+- **Success Rate Tracking**: Real-time statistics showing services disabled and processes killed
+- **Logging Enhancements**: Better error handling and detailed operation logging
+- **System Optimization**: CPU usage reduced, memory optimized, improved battery life
+- **Automatic Restart Protection**: Prevents eliminated processes from restarting
+- **Performance Reporting**: Shows before/after process counts and success rates
+
+### v2.0
 - Consolidated and optimized for GitHub publishing
 - Added Apple Intelligence service support
 - Improved installation system

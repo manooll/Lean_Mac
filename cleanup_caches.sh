@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # macOS Tahoe 26.0 Cache Cleanup Script
-# Enhanced for Apple Intelligence and new system caches
+# Version: 2.1 - Enhanced for Apple Intelligence and new system caches
 # Updated for macOS Tahoe 26.0
 # Author: Jay L. [Manull]
 # License: MIT
