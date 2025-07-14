@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # macOS Tahoe 26.0 Bloat Service Disabler
-# Version: 2.2 - Minimal Spotlight Edition
+# Version: 2.3 - Minimal Spotlight Edition (Fixed CMD+Space)
 # Purpose: Maximize dev resources, privacy, and battery life by disabling Apple/Adobe bloat
 # Repository: https://github.com/manull/Lean-Mac (styling inspiration)
 # 
@@ -16,7 +16,7 @@
 # License: MIT
 
 LOG_FILE="$HOME/Library/Logs/disable_bloat_services.log"
-SCRIPT_VERSION="2.2"
+SCRIPT_VERSION="2.3"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 # Performance tracking variables
@@ -459,35 +459,8 @@ for path in "${USER_DATA_PATHS[@]}"; do
     fi
 done
 
-# Limit spotlight to essential categories for performance
-log_message "🎯 LIMITING SPOTLIGHT TO ESSENTIAL CATEGORIES..."
-# Keep Applications and System Preferences, disable documents/emails/etc
-if defaults write com.apple.spotlight orderedItems -array \
-    '{"enabled" = 1;"name" = "APPLICATIONS";}' \
-    '{"enabled" = 1;"name" = "SYSTEM_PREFS";}' \
-    '{"enabled" = 0;"name" = "DOCUMENTS";}' \
-    '{"enabled" = 0;"name" = "DIRECTORIES";}' \
-    '{"enabled" = 0;"name" = "PDF";}' \
-    '{"enabled" = 0;"name" = "MESSAGES";}' \
-    '{"enabled" = 0;"name" = "CONTACT";}' \
-    '{"enabled" = 0;"name" = "EVENT_TODO";}' \
-    '{"enabled" = 0;"name" = "IMAGES";}' \
-    '{"enabled" = 0;"name" = "BOOKMARKS";}' \
-    '{"enabled" = 0;"name" = "MUSIC";}' \
-    '{"enabled" = 0;"name" = "MOVIES";}' \
-    '{"enabled" = 0;"name" = "PRESENTATIONS";}' \
-    '{"enabled" = 0;"name" = "SPREADSHEETS";}' \
-    '{"enabled" = 0;"name" = "SOURCE";}' \
-    '{"enabled" = 0;"name" = "MENU_DEFINITION";}' \
-    '{"enabled" = 0;"name" = "MENU_OTHER";}' \
-    '{"enabled" = 0;"name" = "MENU_CONVERSION";}' \
-    '{"enabled" = 0;"name" = "MENU_EXPRESSION";}' \
-    '{"enabled" = 0;"name" = "MENU_WEBSEARCH";}' \
-    '{"enabled" = 0;"name" = "MENU_SPOTLIGHT_SUGGESTIONS";}' 2>/dev/null; then
-    log_message "✅ Limited Spotlight to apps and system preferences only"
-else
-    log_message "⚠️  WARNING: Could not limit Spotlight categories"
-fi
+# Note: Spotlight categories left at system defaults for better compatibility
+log_message "✅ Spotlight categories left at system defaults for optimal CMD+Space functionality"
 
 # --- 3. Disable User-Level Services (LaunchAgents) ---
 log_message "🎯 DISABLING USER-LEVEL BLOAT SERVICES..."
@@ -556,7 +529,7 @@ capture_performance_metrics "AFTER"
 log_message "=========================================="
 log_message "EXECUTION SUMMARY"
 log_message "=========================================="
-log_message "✅ Minimal Spotlight configured (app search preserved, heavy indexing disabled)"
+log_message "✅ Minimal Spotlight configured (CMD+Space working, heavy AI indexing disabled)"
 log_message "📊 Services disabled: $SERVICES_DISABLED | Failed: $SERVICES_FAILED"
 log_message "💀 Processes killed: $PROCESSES_KILLED | Failed: $PROCESSES_FAILED"
 log_message "🔄 Total processes processed: ${#DEDUPLICATED_PROCS[@]} (deduplicated from ${#ALL_BLOAT_PROCS[@]})"
