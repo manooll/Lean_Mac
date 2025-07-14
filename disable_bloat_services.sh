@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # macOS Tahoe 26.0 Bloat Service Disabler
-# Version: 2.1 - Enhanced with deduplication, wildcards, and performance metrics
+# Version: 2.2 - Minimal Spotlight Edition
 # Purpose: Maximize dev resources, privacy, and battery life by disabling Apple/Adobe bloat
 # Repository: https://github.com/manull/Lean-Mac (styling inspiration)
 # 
 # Disables 60+ unnecessary services and processes while keeping essential ones
+# NEW: Preserves app search functionality while disabling heavy Spotlight AI/ML indexing
 # Targets highest resource consumers including mds_stores, cloudd, Apple Intelligence
 # Runs continuously with configurable intervals for aggressive bloat control
 # 
@@ -15,7 +16,7 @@
 # License: MIT
 
 LOG_FILE="$HOME/Library/Logs/disable_bloat_services.log"
-SCRIPT_VERSION="2.1"
+SCRIPT_VERSION="2.2"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 # Performance tracking variables
@@ -48,25 +49,21 @@ AI_PROCS=(
 )
 
 # Enhanced Spotlight Services (Major CPU consumers)
+# NOTE: Keep core spotlight for app launching - only disable AI/ML heavy components
 SPOTLIGHT_SERVICES=(
-    "com.apple.corespotlightservice"
-    "com.apple.spotlightknowledged"
-    "com.apple.spotlightknowledged.updater"
-    "com.apple.spotlightknowledged.importer"
+    "com.apple.spotlightknowledged"           # AI Knowledge Base (HEAVY CPU)
+    "com.apple.spotlightknowledged.updater"   # AI Knowledge Updater (HEAVY CPU)
+    "com.apple.spotlightknowledged.importer"  # AI Knowledge Importer (HEAVY CPU)
+    # KEEP: com.apple.corespotlightservice (needed for app search)
 )
 
 SPOTLIGHT_PROCS=(
-    "mds"
-    "mds_stores"
-    "mdworker"
-    "mdworker_shared"
-    "mdbulkimport"
-    "mdimport"
-    "mdutil"
-    "mdfind"
-    "corespotlightd"
-    "managedcorespotlightd"
-    "spotlightknowledged"
+    "mds_stores"              # Heavy metadata indexing (KEEP mds for basic search)
+    "mdworker_shared"         # Shared metadata workers (high CPU)
+    "mdbulkimport"            # Bulk import (heavy operation)
+    "spotlightknowledged"     # AI knowledge daemon (HEAVY CPU)
+    "managedcorespotlightd"   # Managed spotlight (not essential)
+    # KEEP: mds, mdworker, mdimport, mdutil, mdfind, corespotlightd (essential for app search)
 )
 
 # High-Resource System Processes (CRITICAL - Kill First)
@@ -422,7 +419,7 @@ log_message "macOS Tahoe 26.0 Bloat Service Disabler v$SCRIPT_VERSION"
 log_message "=========================================="
 log_message "System: $(sw_vers -productName) $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
 log_message "User: $(whoami), UID: $(id -u)"
-log_message "🔒 Enhanced: Deduplication, wildcards, performance metrics"
+log_message "🔒 Enhanced: Minimal Spotlight, deduplication, wildcards, performance metrics"
 
 # --- 0. Capture baseline performance ---
 capture_performance_metrics "BEFORE"
@@ -431,15 +428,66 @@ capture_performance_metrics "BEFORE"
 log_message "🔄 DEDUPLICATING PROCESS LISTS..."
 deduplicate_process_list
 
-# --- 2. Spotlight: Disable Indexing Everywhere (HUGE PERFORMANCE WIN!) ---
-log_message "🔥 DISABLING SPOTLIGHT INDEXING ON ALL VOLUMES..."
-for vol in $(mdutil -sa 2>/dev/null | grep 'Enabled' | awk -F ':' '{print $1}'); do
-    if sudo mdutil -i off "$vol" 2>/dev/null; then
-        log_message "✅ Disabled indexing on $vol"
-    else
-        log_message "❌ Failed to disable indexing on $vol"
+# --- 2. Spotlight: Selective Indexing (Keep App Search, Disable Heavy Indexing) ---
+log_message "🔥 CONFIGURING MINIMAL SPOTLIGHT FOR APP SEARCH..."
+
+# Keep system volume indexing for app launching (essential for macOS Tahoe)
+SYSTEM_VOLUME="/"
+if sudo mdutil -i on "$SYSTEM_VOLUME" 2>/dev/null; then
+    log_message "✅ PRESERVED: System volume indexing for app search"
+else
+    log_message "⚠️  WARNING: Could not ensure system volume indexing"
+fi
+
+# Disable indexing on user data volumes to save resources
+USER_DATA_PATHS=(
+    "$HOME/Documents"
+    "$HOME/Downloads" 
+    "$HOME/Desktop"
+    "$HOME/Pictures"
+    "$HOME/Movies"
+    "$HOME/Music"
+)
+
+for path in "${USER_DATA_PATHS[@]}"; do
+    if [ -d "$path" ]; then
+        if sudo mdutil -i off "$path" 2>/dev/null; then
+            log_message "✅ Disabled heavy indexing on $path"
+        else
+            log_message "ℹ️  INFO: Could not disable indexing on $path (may not be indexed)"
+        fi
     fi
 done
+
+# Limit spotlight to essential categories for performance
+log_message "🎯 LIMITING SPOTLIGHT TO ESSENTIAL CATEGORIES..."
+# Keep Applications and System Preferences, disable documents/emails/etc
+if defaults write com.apple.spotlight orderedItems -array \
+    '{"enabled" = 1;"name" = "APPLICATIONS";}' \
+    '{"enabled" = 1;"name" = "SYSTEM_PREFS";}' \
+    '{"enabled" = 0;"name" = "DOCUMENTS";}' \
+    '{"enabled" = 0;"name" = "DIRECTORIES";}' \
+    '{"enabled" = 0;"name" = "PDF";}' \
+    '{"enabled" = 0;"name" = "MESSAGES";}' \
+    '{"enabled" = 0;"name" = "CONTACT";}' \
+    '{"enabled" = 0;"name" = "EVENT_TODO";}' \
+    '{"enabled" = 0;"name" = "IMAGES";}' \
+    '{"enabled" = 0;"name" = "BOOKMARKS";}' \
+    '{"enabled" = 0;"name" = "MUSIC";}' \
+    '{"enabled" = 0;"name" = "MOVIES";}' \
+    '{"enabled" = 0;"name" = "PRESENTATIONS";}' \
+    '{"enabled" = 0;"name" = "SPREADSHEETS";}' \
+    '{"enabled" = 0;"name" = "SOURCE";}' \
+    '{"enabled" = 0;"name" = "MENU_DEFINITION";}' \
+    '{"enabled" = 0;"name" = "MENU_OTHER";}' \
+    '{"enabled" = 0;"name" = "MENU_CONVERSION";}' \
+    '{"enabled" = 0;"name" = "MENU_EXPRESSION";}' \
+    '{"enabled" = 0;"name" = "MENU_WEBSEARCH";}' \
+    '{"enabled" = 0;"name" = "MENU_SPOTLIGHT_SUGGESTIONS";}' 2>/dev/null; then
+    log_message "✅ Limited Spotlight to apps and system preferences only"
+else
+    log_message "⚠️  WARNING: Could not limit Spotlight categories"
+fi
 
 # --- 3. Disable User-Level Services (LaunchAgents) ---
 log_message "🎯 DISABLING USER-LEVEL BLOAT SERVICES..."
@@ -508,11 +556,11 @@ capture_performance_metrics "AFTER"
 log_message "=========================================="
 log_message "EXECUTION SUMMARY"
 log_message "=========================================="
-log_message "✅ Spotlight indexing disabled on all volumes"
+log_message "✅ Minimal Spotlight configured (app search preserved, heavy indexing disabled)"
 log_message "📊 Services disabled: $SERVICES_DISABLED | Failed: $SERVICES_FAILED"
 log_message "💀 Processes killed: $PROCESSES_KILLED | Failed: $PROCESSES_FAILED"
 log_message "🔄 Total processes processed: ${#DEDUPLICATED_PROCS[@]} (deduplicated from ${#ALL_BLOAT_PROCS[@]})"
-log_message "✅ Essential services preserved"
+log_message "✅ Essential services preserved (including app search functionality)"
 
 # Function to calculate and display success rates
 display_success_rates() {
