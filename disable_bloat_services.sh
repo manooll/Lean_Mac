@@ -369,10 +369,35 @@ disable_system_service() {
             ((SERVICES_FAILED++))
         fi
         # Extra persistence: bootout from system bootstrap context
-        sudo bootout_service "system" "$service_name"
+        bootout_service "system" "$service_name"
     else
         log_message "ℹ️  SYSTEM NOT FOUND: $service_name"
     fi
+}
+
+# Function to properly disable and unload services
+# Includes additional modern services
+update_services_and_processes() {
+    log_message "🔄 Updating services and processes for current macOS version"
+
+    MISSING_AI_SERVICES=(
+        "com.apple.siri.soundanalysisworkerd"
+        "com.apple.gamed"
+        "com.apple.gamekit.bulletind" 
+        "com.apple.backgroundtaskmanagement"
+        "com.apple.tipsd"
+        "com.apple.screentime.agent"
+    )
+
+    MISSING_TELEMETRY=(
+        "com.apple.coremedialogd"
+        "com.apple.weatherkit.weatherd"
+        "com.apple.newsagent"
+    )
+
+    ALL_USER_SERVICES+=("${MISSING_AI_SERVICES[@]}" "${MISSING_TELEMETRY[@]}")
+
+    log_message "✅ Updated: User services now include modern macOS service deactivations"
 }
 
 # Enhanced process killing with wildcard support
@@ -424,6 +449,10 @@ log_message "🔒 Enhanced: Minimal Spotlight, deduplication, wildcards, perform
 # --- 0. Capture baseline performance ---
 capture_performance_metrics "BEFORE"
 
+# --- 0.1. Update services for modern macOS ---
+log_message "🔄 UPDATING FOR MODERN MACOS SERVICES..."
+update_services_and_processes
+
 # --- 1. Process deduplication for efficiency ---
 log_message "🔄 DEDUPLICATING PROCESS LISTS..."
 deduplicate_process_list
@@ -454,10 +483,31 @@ for path in "${USER_DATA_PATHS[@]}"; do
         if sudo mdutil -i off "$path" 2>/dev/null; then
             log_message "✅ Disabled heavy indexing on $path"
         else
-            log_message "ℹ️  INFO: Could not disable indexing on $path (may not be indexed)"
+            log_message "ℹ️  INFO: Could not disable indexing on $path - may not be indexed"
         fi
     fi
 done
+
+# Verification of killed processes
+verify_processes_killed() {
+    sleep 3
+    local still_running=0
+    for proc in "${HIGH_RESOURCE_PROCS[@]}"; do
+        if pgrep -f "$proc" >/dev/null 2>&1; then
+            log_message "⚠️  STILL RUNNING: $proc (may need stronger disable)"
+            ((still_running++))
+        fi
+    done
+    log_message "📊 Processes still running after kill: $still_running"
+}
+
+# Add enhanced processor killer
+kill_process_enhanced() {
+    local proc="$1"
+    pkill -f "^$proc$" 2>/dev/null
+    pkill -f "$proc\..*" 2>/dev/null
+    pkill -f ".*$proc.*" 2>/dev/null
+}
 
 # Note: Spotlight categories left at system defaults for better compatibility
 log_message "✅ Spotlight categories left at system defaults for optimal CMD+Space functionality"
@@ -477,7 +527,7 @@ done
 # --- 5. Kill Running Processes (PRIORITY: High-Resource First) ---
 log_message "💀 PRIORITY KILL: Highest Resource Consumers..."
 for proc in "${HIGH_RESOURCE_PROCS[@]}"; do
-    kill_process "$proc"
+    kill_process_enhanced "$proc"
 done
 
 log_message "💀 KILLING REMAINING BLOAT PROCESSES (DEDUPLICATED)..."
@@ -492,9 +542,13 @@ for proc in "${DEDUPLICATED_PROCS[@]}"; do
     done
     
     if [ "$already_killed" = false ]; then
-        kill_process "$proc"
+        kill_process_enhanced "$proc"
     fi
 done
+
+# --- 5.1. Verify processes were killed ---
+log_message "🔍 VERIFYING PROCESSES KILLED..."
+verify_processes_killed
 
 # --- 6. Essential Services Health Check ---
 log_message "🛡️  VERIFYING ESSENTIAL SERVICES..."
