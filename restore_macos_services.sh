@@ -11,7 +11,7 @@
 # 
 # Author: Jay L. [Manull]
 # License: MIT
-# Repository: https://github.com/manull/lean_macos
+# Repository: https://github.com/manooll/Lean_Mac
 
 LOG_FILE="$HOME/Library/Logs/restore_macos_services.log"
 SCRIPT_VERSION="1.0"

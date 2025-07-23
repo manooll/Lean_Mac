@@ -3,7 +3,7 @@
 # macOS Tahoe 26.0 Bloat Service Disabler
 # Version: 2.3 - Minimal Spotlight Edition (Fixed CMD+Space)
 # Purpose: Maximize dev resources, privacy, and battery life by disabling Apple/Adobe bloat
-# Repository: https://github.com/manull/Lean-Mac (styling inspiration)
+# Repository: https://github.com/manooll/Lean_Mac
 # 
 # Disables 60+ unnecessary services and processes while keeping essential ones
 # NEW: Preserves app search functionality while disabling heavy Spotlight AI/ML indexing

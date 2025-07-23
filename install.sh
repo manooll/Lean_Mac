@@ -337,7 +337,7 @@ show_post_install_info() {
     echo "  • System restart recommended for full effect"
     echo "  • Monitor logs for any issues"
     echo
-    echo "🔧 For support, visit: https://github.com/your-repo/macos-bloat-disabler"
+    echo "🔧 For support, visit: https://github.com/manooll/Lean_Mac"
     echo "==========================================="
 }
 

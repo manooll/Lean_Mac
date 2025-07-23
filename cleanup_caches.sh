@@ -5,7 +5,7 @@
 # Updated for macOS Tahoe 26.0
 # Author: Jay L. [Manull]
 # License: MIT
-# Repository: https://github.com/manull/lean_macos
+# Repository: https://github.com/manooll/Lean_Mac
 
 LOG_FILE="$HOME/Library/Logs/cache_cleanup.log"
 
