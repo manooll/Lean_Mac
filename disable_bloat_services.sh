@@ -213,16 +213,17 @@ log_message "🔍 Checking for active system updates..."
 check_system_updates
 log_message "✅ No system updates detected - proceeding with debloat service"
 
-# Cloud & Sync Services (8)
-log_message "--- Disabling Cloud & Sync Services ---"
-disable_service "com.apple.cloudd" "Main iCloud daemon"
+# Cloud & Sync Services (5) - PRESERVING MAIL SERVICES
+log_message "--- Disabling Cloud & Sync Services (Preserving Mail) ---"
+# PRESERVED: com.apple.cloudd - Required for iCloud Mail sync
+# PRESERVED: com.apple.icloudmailagent - Required for iCloud Mail
+# PRESERVED: com.apple.syncdefaultsd - Required for Mail sync
+# PRESERVED: com.apple.protectedcloudstorage.protectedcloudkeysyncing - May be needed for Mail keychain
 disable_service "com.apple.icloud.searchpartyuseragent" "Find My network"
 disable_service "com.apple.icloud.findmydeviced.findmydevice-user-agent" "Find My device"
 disable_service "com.apple.findmy.findmylocateagent" "Find My location"
-disable_service "com.apple.protectedcloudstorage.protectedcloudkeysyncing" "iCloud keychain"
-disable_service "com.apple.icloudmailagent" "iCloud mail"
 disable_service "com.apple.itunescloudd" "iTunes/Music cloud sync"
-disable_service "com.apple.syncdefaultsd" "Default sync service"
+log_message "✅ PRESERVED: Mail-related services (cloudd, icloudmailagent, syncdefaultsd, protectedcloudstorage)"
 
 # AI & Intelligence Services (12)
 log_message "--- Disabling AI & Intelligence Services ---"
