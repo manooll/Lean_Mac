@@ -1,0 +1,29 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Log Files
+*.log
+
+# Temporary Files
+*.tmp
+*.temp
+*~
+
+# LaunchAgent plist files (may contain user-specific paths)
+*.plist
+
+# User-specific configuration
+config/
+local/
+
+# IDE/Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup Files
+*.bak
+*.backup
