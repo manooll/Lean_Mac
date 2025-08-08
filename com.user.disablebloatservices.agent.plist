@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.user.disablebloatservices</string>
+    <string>com.user.disablebloatservices.agent</string>
     
     <key>ProgramArguments</key>
     <array>
@@ -14,10 +14,10 @@
     <true/>
     
     <key>StandardOutPath</key>
-    <string>/Users/pramana/Library/Logs/disable_bloat_services.log</string>
+    <string>$HOME/Library/Logs/disable_bloat_services.log</string>
     
     <key>StandardErrorPath</key>
-    <string>/Users/pramana/Library/Logs/disable_bloat_services.log</string>
+    <string>$HOME/Library/Logs/disable_bloat_services.log</string>
     
     <key>StartInterval</key>
     <integer>300</integer>
