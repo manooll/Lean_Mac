@@ -246,7 +246,7 @@ Found a new bloat service? Performance issue? We want to hear about it.
 **Quick start:**
 ```bash
 git clone https://github.com/manooll/Lean_Mac.git
-cd macos-bloat-disabler
+cd Lean_Mac
 sudo ./install.sh  # Test on a VM first!
 ```
 
