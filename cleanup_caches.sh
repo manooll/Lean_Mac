@@ -41,7 +41,6 @@ clean_cache() {
 
             # Remove all cache files safely
             rm -rf "${cache_dir:?}/"* 2>/dev/null
-        main
         fi
 
         local size_after
