@@ -270,7 +270,7 @@ stop_bloat_disabler
 
 # --- 2. Restore Spotlight indexing ---
 log_message "🔍 RESTORING SPOTLIGHT INDEXING ON ALL VOLUMES..."
-for vol in $(mdutil -sa 2>/dev/null | awk -F ':' '{print $1}'); do
+mdutil -sa 2>/dev/null | awk -F ':' '{print $1}' | while IFS= read -r vol; do
     if mdutil -i on "$vol" 2>/dev/null; then
         log_message "✅ Enabled indexing on $vol"
     else
@@ -361,4 +361,4 @@ echo
 echo "✅ Restoration complete! System restart recommended."
 echo "📝 Check log file: $LOG_FILE"
 
-exit 0 
+exit 0
