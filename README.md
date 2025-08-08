@@ -252,8 +252,20 @@ sudo ./install.sh  # Test on a VM first!
 
 **Get involved:**
 - [Report Issues](https://github.com/manooll/Lean_Mac/issues)
-- [Join Discussions](https://github.com/manooll/Lean_Mac/discussions)  
+- [Join Discussions](https://github.com/manooll/Lean_Mac/discussions)
 - Submit PRs with improvements
+
+## 🧪 Testing
+
+Run [`shellcheck`](https://www.shellcheck.net/) locally to catch shell script errors before
+submitting changes:
+
+```bash
+./tests/shellcheck.sh
+```
+
+The script expects `shellcheck` to be installed (e.g. via `brew install shellcheck` on
+macOS or `apt install shellcheck` on Debian/Ubuntu).
 
 ---
 
