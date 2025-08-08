@@ -7,6 +7,8 @@
 # Created: $(date)
 
 LOG_FILE="$HOME/Library/Logs/disable_bloat_services.log"
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
 SERVICES_DISABLED=0
 SERVICES_FAILED=0
 PROCESSES_KILLED=0

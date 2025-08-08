@@ -14,6 +14,8 @@
 # Repository: https://github.com/manooll/Lean_Mac
 
 LOG_FILE="$HOME/Library/Logs/restore_macos_services.log"
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
 SCRIPT_VERSION="1.0"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 

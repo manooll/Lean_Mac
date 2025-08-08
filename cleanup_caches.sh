@@ -5,6 +5,8 @@
 # Created: $(date)
 
 LOG_FILE="$HOME/Library/Logs/cache_cleanup.log"
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
 TOTAL_FREED=0
 
 # Function to log messages
