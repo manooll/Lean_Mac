@@ -1,319 +1,134 @@
 #!/bin/bash
 
-# macOS Tahoe 26.0 Bloat Service Disabler
-# Version: 2.3 - Minimal Spotlight Edition (Fixed CMD+Space)
-# Purpose: Maximize dev resources, privacy, and battery life by disabling Apple/Adobe bloat
-# Repository: https://github.com/manooll/Lean_Mac
-# 
-# Disables 60+ unnecessary services and processes while keeping essential ones
-# NEW: Preserves app search functionality while disabling heavy Spotlight AI/ML indexing
-# Targets highest resource consumers including mds_stores, cloudd, Apple Intelligence
-# Runs continuously with configurable intervals for aggressive bloat control
-# 
-# Updated for macOS Tahoe 26.0 with Apple Intelligence and enhanced AI services
-# 
-# Author: Jay L. [Manull]
-# License: MIT
+# macOS Bloat Service Disabler - Enhanced Version (System Update Safe)
+# Disables 32+ unnecessary services while keeping essential ones
+# Handles both user and system services + kills running processes
+# UPDATED: Added system update protection and safer process handling
+# Created: $(date)
 
 LOG_FILE="$HOME/Library/Logs/disable_bloat_services.log"
-SCRIPT_VERSION="2.3"
-export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-
-# Performance tracking variables
 SERVICES_DISABLED=0
 SERVICES_FAILED=0
 PROCESSES_KILLED=0
-PROCESSES_FAILED=0
+PROCESSES_SKIPPED=0
 
-# --- Configurable Blocklists ---
-
-# Apple Intelligence Services (NEW IN TAHOE 26.0) - Highest Priority
-AI_SERVICES=(
-    "com.apple.intelligenceplatformd"
-    "com.apple.intelligencetasksd"
-    "com.apple.intelligencecontextd"
-    "com.apple.intelligenceflowd"
-    "com.apple.knowledgeconstructiond"
-    "com.apple.privatecloudcomputed"
-    "com.apple.TGOnDeviceInferenceProviderService"
-)
-
-AI_PROCS=(
-    "intelligenceplatformd"
-    "intelligencetasksd"
-    "intelligencecontextd"
-    "intelligenceflowd"
-    "knowledgeconstructiond"
-    "privatecloudcomputed"
-    "TGOnDeviceInferenceProviderService"
-)
-
-# Enhanced Spotlight Services (Major CPU consumers)
-# NOTE: Keep core spotlight for app launching - only disable AI/ML heavy components
-SPOTLIGHT_SERVICES=(
-    "com.apple.spotlightknowledged"           # AI Knowledge Base (HEAVY CPU)
-    "com.apple.spotlightknowledged.updater"   # AI Knowledge Updater (HEAVY CPU)
-    "com.apple.spotlightknowledged.importer"  # AI Knowledge Importer (HEAVY CPU)
-    # KEEP: com.apple.corespotlightservice (needed for app search)
-)
-
-SPOTLIGHT_PROCS=(
-    "mds_stores"              # Heavy metadata indexing (KEEP mds for basic search)
-    "mdworker_shared"         # Shared metadata workers (high CPU)
-    "mdbulkimport"            # Bulk import (heavy operation)
-    "spotlightknowledged"     # AI knowledge daemon (HEAVY CPU)
-    "managedcorespotlightd"   # Managed spotlight (not essential)
-    # KEEP: mds, mdworker, mdimport, mdutil, mdfind, corespotlightd (essential for app search)
-)
-
-# High-Resource System Processes (CRITICAL - Kill First)
-HIGH_RESOURCE_PROCS=(
-    "mds_stores"              # Spotlight Metadata Store (60%+ CPU)
-    "mobileassetd"            # Mobile Asset Daemon (System Updates)
-    "homeenergyd"             # Home Energy Daemon (High CPU)
-    "dasd"                    # Duet Activity Scheduler (AI Predictions)
-    "deleted"                 # Cache Deletion Daemon
-    "deleted_helper"          # Cache Deletion Helper
-    "accountsd"               # Account Sync Daemon (High CPU)
-    "coreduetd"               # Core Duet Daemon (AI Predictions)
-    "audioanalyticsd"         # Audio Analytics Daemon
-)
-
-# Enhanced AI & ML Services
-AI_ML_SERVICES=(
-    "com.apple.mediaanalysisd-access"
-    "com.apple.proactiveeventtrackerd"
-    "com.apple.geoanalyticsd"
-    "com.apple.memoryanalyticsd"
-    "com.apple.inputanalyticsd"
-    "com.apple.proactived"
-    "com.apple.duetexpertd"
-    "com.apple.knowledge-agent"
-)
-
-AI_ML_PROCS=(
-    "mediaanalysisd-access"
-    "mediaanalysisd"
-    "proactiveeventtrackerd"
-    "geoanalyticsd"
-    "memoryanalyticsd"
-    "triald"
-    "triald_system"
-    "proactived"
-    "duetexpertd"
-    "knowledge-agent"
-)
-
-# Siri & Assistant Services
-SIRI_SERVICES=(
-    "com.apple.siri.context.service"
-    "com.apple.siriactionsd"
-    "com.apple.siriknowledged"
-    "com.apple.assistantd"
-    "com.apple.siriinferenced"
-    "com.apple.assistant_cdmd"
-    "com.apple.assistant_service"
-    "com.apple.sirittsd"
-)
-
-SIRI_PROCS=(
-    "assistantd"
-    "siriknowledged"
-    "siriactionsd"
-    "siriinferenced"
-    "sirittsd"
-    "assistant_cdmd"
-)
-
-# Cloud & Sync Services (EXCLUDING Find My for device location)
-ICLOUD_SERVICES=(
-    "com.apple.cloudd"
-    "com.apple.cloudphotod"
-    "com.apple.icloud.searchpartyuseragent"
-    "com.apple.protectedcloudstorage.protectedcloudkeysyncing"
-    "com.apple.icloudmailagent"
-    "com.apple.itunescloudd"
-    "com.apple.syncdefaultsd"
-    "com.apple.cloudsettingssyncagent"
-)
-
-ICLOUD_PROCS=(
-    "cloudd"
-    "cloudphotod"
-    "cloudsettingssyncagent"
-    "cloudpaird"
-    "cloudanalyticsd"
-    "cloudkit"
-    "itunescloudd"
-)
-
-# Analytics & Telemetry Services (Privacy)
-TELEMETRY_SERVICES=(
-    "com.apple.analyticsagent"
-    "com.apple.feedbackd"
-    "com.apple.diagnostics_agent"
-    "com.apple.analyticsd"
-    "com.apple.wifianalyticsd"
-    "com.apple.ecosystemanalyticsd"
-    "com.apple.diagnosticservicesd"
-    "com.apple.osanalytics.osanalyticshelper"
-    "com.apple.audioanalyticsd"
-    "com.apple.usbctelemetryd"
-)
-
-TELEMETRY_PROCS=(
-    "analyticsagent"
-    "analyticsd"
-    "feedbackd"
-    "diagnostics_agent"
-    "wifianalyticsd"
-    "ecosystemanalyticsd"
-    "osanalyticshelper"
-    "inputanalyticsd"
-    "audioanalyticsd"
-)
-
-# Store & Media Services
-MEDIA_SERVICES=(
-    "com.apple.appstoreagent"
-    "com.apple.weatherd"
-    "com.apple.weather.menu"
-    "com.apple.mediaremoteagent"
-    "com.apple.mediaanalysisd"
-    "com.apple.mediastream.mstreamd"
-    "com.apple.amp.mediasharingd"
-    "com.apple.mediacontinuityd"
-)
-
-MEDIA_PROCS=(
+# System Update Protection - Processes that should NEVER be killed
+SYSTEM_UPDATE_PROTECTED=(
+    "softwareupdate"
+    "softwareupdated"
+    "mobileassetd"          # Mobile Asset Daemon (System Updates)
+    "installd"
+    "installer"
+    "pkgbuild"
+    "packagekitd"
+    "system_installd"
+    "MobileSoftwareUpdate"
+    "SoftwareUpdateNotificationManager"
+    "mas"                   # Mac App Store updates
+    "App Store"
+    "storedownloadd"
+    "storeassetd"
     "commerce"
-    "mediaremoteagent"
+    "CommerceKit"
+    "nsurlsessiond"         # Network sessions for downloads
+    "cloudd"                # May be needed for update downloads
+    "deleted"               # Cache management during updates
+    "deleted_helper"        # Cache management helper
+    "xpcproxy"              # XPC proxy for system services
+    "launchservicesd"       # Launch Services
+    "coreservicesd"         # Core Services
+    "systemstats"           # System statistics
+    "kernel_task"           # Kernel
+    "launchd"               # Launch daemon
+    "loginwindow"           # Login window
+    "WindowServer"          # Window server
+    "Finder"                # Finder
+    "Dock"                  # Dock
 )
 
-# Social & Communication Services
-SOCIAL_SERVICES=(
-    "com.apple.sociallayerd"
-    "com.apple.keychainsharingmessagingd"
-    "com.apple.rapportd"
-)
-
-SOCIAL_PROCS=(
-    "rapportd"
-)
-
-# Adobe Background Services (Resource Hogs)
-ADOBE_SERVICES=(
-    "com.adobe.AdobeCreativeCloud"
-    "com.adobe.ccxprocess"
-    "com.adobe.acc.installer.v2"
-)
-
-ADOBE_PROCS=(
-    "AdobeCreativeCloud"
-    "ccxprocess"
-    "Creative Cloud"
-    "ACCFinderSync"
-    "Core Sync"
-    "AdobeIPCBroker"
-    "AdobeUpdateService"
-    "AdobeGCClient"
-)
-
-# Figma Processes
-FIGMA_PROCS=(
-    "figma_agent"
-)
-
-# Additional System Processes
-SYSTEM_PROCS=(
-    "appleaccountd"
-    "amsaccountsd"
-    "homed"
-    "idleassetsd"
-    "assetsubscriptiond"
-    "remindd"
-    "axassetsd"
-    "parsec-fbf"
-    "parsecd"
-    "chronod"
-    "PasswordBreachAgent"
-)
-
-# Combine all services for processing
-ALL_USER_SERVICES=("${AI_SERVICES[@]}" "${SPOTLIGHT_SERVICES[@]}" "${AI_ML_SERVICES[@]}" "${SIRI_SERVICES[@]}" "${ICLOUD_SERVICES[@]}" "${TELEMETRY_SERVICES[@]}" "${MEDIA_SERVICES[@]}" "${SOCIAL_SERVICES[@]}" "${ADOBE_SERVICES[@]}")
-
-ALL_SYSTEM_SERVICES=("${TELEMETRY_SERVICES[@]}" "${ADOBE_SERVICES[@]}")
-
-# Create deduplicated process list for efficiency
-ALL_BLOAT_PROCS=("${HIGH_RESOURCE_PROCS[@]}" "${AI_PROCS[@]}" "${SPOTLIGHT_PROCS[@]}" "${AI_ML_PROCS[@]}" "${SIRI_PROCS[@]}" "${ICLOUD_PROCS[@]}" "${TELEMETRY_PROCS[@]}" "${MEDIA_PROCS[@]}" "${SOCIAL_PROCS[@]}" "${ADOBE_PROCS[@]}" "${FIGMA_PROCS[@]}" "${SYSTEM_PROCS[@]}")
-
-# --- Utility Functions ---
-
+# Function to log messages
 log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
-# Function to capture system performance metrics
-capture_performance_metrics() {
-    local label="$1"
-    log_message "📊 PERFORMANCE METRICS ($label):"
+# Enhanced function to safely kill processes with system update protection
+kill_process() {
+    local process_name="$1"
+    local description="$2"
     
-    # CPU usage snapshot
-    local cpu_usage=$(top -l 1 -s 0 | grep "CPU usage" | head -1)
-    log_message "CPU: $cpu_usage"
-    
-    # Memory usage
-    local memory_info=$(vm_stat | head -5 | tr '\n' ' ')
-    log_message "Memory: $memory_info"
-    
-    # Process count
-    local proc_count=$(ps aux | wc -l)
-    log_message "Process count: $proc_count"
-    
-    # Disk space
-    local disk_usage=$(df -h / | tail -1 | awk '{print "Used: "$3" Available: "$4" ("$5" full)"}')
-    log_message "Disk: $disk_usage"
-    
-    # Active bloat processes (for comparison)
-    local bloat_count=0
-    for proc in "${HIGH_RESOURCE_PROCS[@]}"; do
-        if pgrep -f "$proc" >/dev/null 2>&1; then
-            ((bloat_count++))
+    # Check if this process is protected
+    for protected in "${SYSTEM_UPDATE_PROTECTED[@]}"; do
+        if [[ "$process_name" == *"$protected"* ]] || [[ "$protected" == *"$process_name"* ]]; then
+            log_message "🛡️  PROTECTED: $process_name - $description (System update critical)"
+            ((PROCESSES_SKIPPED++))
+            return 0
         fi
     done
-    log_message "High-resource bloat processes running: $bloat_count"
-}
-
-# Function to deduplicate process arrays
-deduplicate_process_list() {
-    local temp_file=$(mktemp)
-    printf '%s\n' "${ALL_BLOAT_PROCS[@]}" | sort | uniq > "$temp_file"
     
-    # Use compatible alternative to readarray
-    DEDUPLICATED_PROCS=()
-    while IFS= read -r line; do
-        DEDUPLICATED_PROCS+=("$line")
-    done < "$temp_file"
+    local pids=$(pgrep -f "$process_name" 2>/dev/null)
+    if [ -n "$pids" ]; then
+        for pid in $pids; do
+            # Double-check the actual process name to avoid false positives
+            local actual_name=$(ps -p "$pid" -o comm= 2>/dev/null | xargs basename)
+            
+            # Additional protection check on actual process name
+            local is_protected=false
+            for protected in "${SYSTEM_UPDATE_PROTECTED[@]}"; do
+                if [[ "$actual_name" == *"$protected"* ]] || [[ "$protected" == *"$actual_name"* ]]; then
+                    log_message "🛡️  PROTECTED: $actual_name (PID: $pid) - System critical process"
+                    ((PROCESSES_SKIPPED++))
+                    is_protected=true
+                    break
+                fi
+            done
+            
+            if [ "$is_protected" = false ]; then
+                # Use SIGTERM first, then SIGKILL if needed (gentler approach)
+                if kill -TERM "$pid" 2>/dev/null; then
+                    sleep 1
+                    # Check if process is still running
+                    if kill -0 "$pid" 2>/dev/null; then
+                        # Still running, use SIGKILL
+                        if kill -9 "$pid" 2>/dev/null; then
+                            log_message "💀 KILLED: $process_name (PID: $pid) - $description (SIGKILL)"
+                            ((PROCESSES_KILLED++))
+                        else
+                            log_message "❌ FAILED TO KILL: $process_name (PID: $pid) - $description"
+                        fi
+                    else
+                        log_message "✅ TERMINATED: $process_name (PID: $pid) - $description (SIGTERM)"
+                        ((PROCESSES_KILLED++))
+                    fi
+                else
+                    log_message "❌ FAILED TO TERMINATE: $process_name (PID: $pid) - $description"
+                fi
+            fi
+        done
+    fi
+}
+
+# Function to disable system-level services
+disable_system_service() {
+    local service_name="$1"
+    local description="$2"
     
-    rm "$temp_file"
-    log_message "📋 Deduplicated process list: ${#ALL_BLOAT_PROCS[@]} → ${#DEDUPLICATED_PROCS[@]} unique processes"
+    if sudo launchctl print system 2>/dev/null | grep -q "$service_name" 2>/dev/null; then
+        if sudo launchctl disable "system/$service_name" 2>/dev/null; then
+            log_message "🔴 SYSTEM DISABLED: $service_name - $description"
+            ((SERVICES_DISABLED++))
+        else
+            log_message "❌ SYSTEM FAILED: $service_name - $description"
+            ((SERVICES_FAILED++))
+        fi
+    else
+        log_message "ℹ️  SYSTEM NOT FOUND: $service_name - $description"
+    fi
 }
 
-# Enhanced bootout service for maximum persistence (macOS 12+)
-bootout_service() {
-    local type="$1" # "system" or "gui/$(id -u)"
-    local name="$2"
-    # Try all common plist locations (fails silently if not found)
-    launchctl bootout "$type" "/System/Library/LaunchDaemons/$name.plist" 2>/dev/null
-    launchctl bootout "$type" "/Library/LaunchDaemons/$name.plist" 2>/dev/null
-    launchctl bootout "$type" "/System/Library/LaunchAgents/$name.plist" 2>/dev/null
-    launchctl bootout "$type" "/Library/LaunchAgents/$name.plist" 2>/dev/null
-    launchctl bootout "$type" "/Users/$(id -un)/Library/LaunchAgents/$name.plist" 2>/dev/null
-}
-
-# Function to disable user-level services (LaunchAgents)
+# Function to disable a service for all logged-in users
 disable_service() {
     local service_name="$1"
+    local description="$2"
     local disabled=false
     
     # Get all logged-in users
@@ -322,15 +137,13 @@ disable_service() {
             # Try to disable for this user
             if launchctl print "gui/$user_id" 2>/dev/null | grep -q "$service_name" 2>/dev/null; then
                 if launchctl disable "gui/$user_id/$service_name" 2>/dev/null; then
-                    log_message "✅ DISABLED: $service_name (UID: $user_id)"
+                    log_message "✅ DISABLED: $service_name - $description (UID: $user_id)"
                     disabled=true
                     ((SERVICES_DISABLED++))
                 else
-                    log_message "❌ FAILED: $service_name (UID: $user_id)"
+                    log_message "❌ FAILED: $service_name - $description (UID: $user_id)"
                     ((SERVICES_FAILED++))
                 fi
-                # Extra persistence: bootout from bootstrap context
-                bootout_service "gui/$user_id" "$service_name"
             fi
         fi
     done
@@ -339,276 +152,193 @@ disable_service() {
     if [ "$EUID" -ne 0 ]; then
         if launchctl print "gui/$(id -u)" 2>/dev/null | grep -q "$service_name" 2>/dev/null; then
             if launchctl disable "gui/$(id -u)/$service_name" 2>/dev/null; then
-                log_message "✅ DISABLED: $service_name (current user)"
+                log_message "✅ DISABLED: $service_name - $description (current user)"
                 disabled=true
                 ((SERVICES_DISABLED++))
             else
-                log_message "❌ FAILED: $service_name (current user)"
+                log_message "❌ FAILED: $service_name - $description (current user)"
                 ((SERVICES_FAILED++))
             fi
-            # Extra persistence: bootout from bootstrap context
-            bootout_service "gui/$(id -u)" "$service_name"
         fi
     fi
     
     if [ "$disabled" = false ]; then
-        log_message "ℹ️  NOT FOUND: $service_name"
+        log_message "ℹ️  NOT FOUND: $service_name - $description"
     fi
 }
 
-# Function to disable system-level services (LaunchDaemons)
-disable_system_service() {
-    local service_name="$1"
+# Function to check if system updates are currently running
+check_system_updates() {
+    # Check for actual active installation/update processes (not background daemons)
+    local active_update_processes=("installer" "mas install" "pkgutil" "pkgbuild")
     
-    if sudo launchctl print system 2>/dev/null | grep -q "$service_name" 2>/dev/null; then
-        if sudo launchctl disable "system/$service_name" 2>/dev/null; then
-            log_message "🔴 SYSTEM DISABLED: $service_name"
-            ((SERVICES_DISABLED++))
-        else
-            log_message "❌ SYSTEM FAILED: $service_name"
-            ((SERVICES_FAILED++))
-        fi
-        # Extra persistence: bootout from system bootstrap context
-        bootout_service "system" "$service_name"
-    else
-        log_message "ℹ️  SYSTEM NOT FOUND: $service_name"
-    fi
-}
-
-# Function to properly disable and unload services
-# Includes additional modern services
-update_services_and_processes() {
-    log_message "🔄 Updating services and processes for current macOS version"
-
-    MISSING_AI_SERVICES=(
-        "com.apple.siri.soundanalysisworkerd"
-        "com.apple.gamed"
-        "com.apple.gamekit.bulletind" 
-        "com.apple.backgroundtaskmanagement"
-        "com.apple.tipsd"
-        "com.apple.screentime.agent"
-    )
-
-    MISSING_TELEMETRY=(
-        "com.apple.coremedialogd"
-        "com.apple.weatherkit.weatherd"
-        "com.apple.newsagent"
-    )
-
-    ALL_USER_SERVICES+=("${MISSING_AI_SERVICES[@]}" "${MISSING_TELEMETRY[@]}")
-
-    log_message "✅ Updated: User services now include modern macOS service deactivations"
-}
-
-# Enhanced process killing with wildcard support
-kill_process() {
-    local proc="$1"
-    local pids
-    
-    # Enhanced pattern matching for process variations (e.g., mdworker_shared.123)
-    # Try exact match first, then wildcard patterns
-    pids=$(pgrep -f "^$proc$" 2>/dev/null)
-    if [ -z "$pids" ]; then
-        # Try with common suffixes and variations
-        pids=$(pgrep -f "$proc" 2>/dev/null)
-    fi
-    
-    local killed=0
-    for pid in $pids; do
-        # Double-check we're not killing essential processes
-        local cmd=$(ps -p "$pid" -o comm= 2>/dev/null | xargs basename)
-        if [[ "$cmd" =~ ^(kernel|launchd|systemstats|loginwindow|WindowServer|Finder|Dock)$ ]]; then
-            log_message "⚠️  SKIPPED: $proc (PID $pid) - Essential process"
-            continue
-        fi
-        
-        if kill -9 "$pid" 2>/dev/null; then
-            log_message "💀 KILLED: $proc (PID $pid)"
-            ((PROCESSES_KILLED++))
-            killed=1
-        else
-            log_message "❌ FAILED TO KILL: $proc (PID $pid)"
-            ((PROCESSES_FAILED++))
+    for proc in "${active_update_processes[@]}"; do
+        if pgrep -f "$proc" > /dev/null 2>&1; then
+            local pids=$(pgrep -f "$proc")
+            log_message "⚠️  ACTIVE UPDATE DETECTED: $proc (PIDs: $pids)"
+            log_message "🛑 ABORTING: Will not run debloat service during active installations"
+            log_message "💡 TIP: Try running again after installations complete"
+            exit 0
         fi
     done
     
-    if [ "$killed" -eq 0 ] && [ -n "$pids" ]; then
-        log_message "⚠️  NO KILL: $proc (process protected or already dead)"
+    # Check for active softwareupdate processes (not the background daemon)
+    # Look for actual download/install activity
+    if pgrep -f "softwareupdate.*-[id]" > /dev/null 2>&1; then
+        local pids=$(pgrep -f "softwareupdate.*-[id]")
+        log_message "⚠️  ACTIVE SOFTWARE UPDATE DETECTED: softwareupdate (PIDs: $pids)"
+        log_message "🛑 ABORTING: Will not run debloat service during software updates"
+        log_message "💡 TIP: Try running again after updates complete"
+        exit 0
+    fi
+    
+    # Check if macOS installer is running
+    if pgrep -f "Install macOS" > /dev/null 2>&1 || pgrep -f "macOS.*Installer" > /dev/null 2>&1; then
+        log_message "⚠️  macOS INSTALLER DETECTED - Aborting debloat service"
+        exit 0
+    fi
+    
+    # Check for high mobileassetd CPU usage (indicates active downloading)
+    local mobileasset_cpu=$(ps -eo pid,pcpu,comm | grep mobileassetd | awk '{if($2 > 5.0) print $1}' | head -1)
+    if [ -n "$mobileasset_cpu" ]; then
+        log_message "⚠️  HIGH MOBILEASSETD ACTIVITY DETECTED - Likely downloading updates"
+        log_message "🛑 ABORTING: Will not run debloat service during asset downloads"
+        log_message "💡 TIP: Try running again after downloads complete"
+        exit 0
     fi
 }
 
-# --- Core Execution ---
+log_message "=== Starting macOS Bloat Service Disabler (System Update Safe) ==="
+log_message "🔍 Checking for active system updates..."
+check_system_updates
+log_message "✅ No system updates detected - proceeding with debloat service"
 
-log_message "=========================================="
-log_message "macOS Tahoe 26.0 Bloat Service Disabler v$SCRIPT_VERSION"
-log_message "=========================================="
-log_message "System: $(sw_vers -productName) $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
-log_message "User: $(whoami), UID: $(id -u)"
-log_message "🔒 Enhanced: Minimal Spotlight, deduplication, wildcards, performance metrics"
+# Cloud & Sync Services (5) - PRESERVING MAIL SERVICES
+log_message "--- Disabling Cloud & Sync Services (Preserving Mail) ---"
+# PRESERVED: com.apple.cloudd - Required for iCloud Mail sync
+# PRESERVED: com.apple.icloudmailagent - Required for iCloud Mail
+# PRESERVED: com.apple.syncdefaultsd - Required for Mail sync
+# PRESERVED: com.apple.protectedcloudstorage.protectedcloudkeysyncing - May be needed for Mail keychain
+disable_service "com.apple.icloud.searchpartyuseragent" "Find My network"
+disable_service "com.apple.icloud.findmydeviced.findmydevice-user-agent" "Find My device"
+disable_service "com.apple.findmy.findmylocateagent" "Find My location"
+disable_service "com.apple.itunescloudd" "iTunes/Music cloud sync"
+log_message "✅ PRESERVED: Mail-related services (cloudd, icloudmailagent, syncdefaultsd, protectedcloudstorage)"
 
-# --- 0. Capture baseline performance ---
-capture_performance_metrics "BEFORE"
+# AI & Intelligence Services (12)
+log_message "--- Disabling AI & Intelligence Services ---"
+disable_service "com.apple.intelligenceplatformd" "Apple Intelligence platform"
+disable_service "com.apple.siri.context.service" "Siri context"
+disable_service "com.apple.siriactionsd" "Siri actions"
+disable_service "com.apple.siriknowledged" "Siri knowledge"
+disable_service "com.apple.assistantd" "Assistant daemon"
+disable_service "com.apple.siriinferenced" "Siri inference"
+disable_service "com.apple.assistant_cdmd" "Assistant command"
+disable_service "com.apple.sirittsd" "Siri text-to-speech"
+disable_service "com.apple.proactived" "Proactive suggestions"
+disable_service "com.apple.duetexpertd" "Duet expert system"
+disable_service "com.apple.knowledge-agent" "Knowledge agent"
+disable_service "com.apple.spotlightknowledged.updater" "Spotlight knowledge updater"
 
-# --- 0.1. Update services for modern macOS ---
-log_message "🔄 UPDATING FOR MODERN MACOS SERVICES..."
-update_services_and_processes
+# Telemetry & Analytics (3)
+log_message "--- Disabling Telemetry & Analytics ---"
+disable_service "com.apple.analyticsagent" "Analytics collection"
+disable_service "com.apple.feedbackd" "Feedback daemon"
+disable_service "com.apple.diagnostics_agent" "Diagnostics"
 
-# --- 1. Process deduplication for efficiency ---
-log_message "🔄 DEDUPLICATING PROCESS LISTS..."
-deduplicate_process_list
+# Store & Media Services (4)
+log_message "--- Disabling Store & Media Services ---"
+disable_service "com.apple.appstoreagent" "App Store agent"
+disable_service "com.apple.weatherd" "Weather service"
+disable_service "com.apple.weather.menu" "Weather menu"
+disable_service "com.apple.mediaremoteagent" "Media remote"
 
-# --- 2. Spotlight: Selective Indexing (Keep App Search, Disable Heavy Indexing) ---
-log_message "🔥 CONFIGURING MINIMAL SPOTLIGHT FOR APP SEARCH..."
+# Social & Communication (3)
+log_message "--- Disabling Social & Communication ---"
+disable_service "com.apple.sociallayerd" "Social framework"
+disable_service "com.apple.keychainsharingmessagingd" "Keychain sharing"
+disable_service "com.apple.rapportd" "Handoff/Continuity"
 
-# Keep system volume indexing for app launching (essential for macOS Tahoe)
-SYSTEM_VOLUME="/"
-if sudo mdutil -i on "$SYSTEM_VOLUME" 2>/dev/null; then
-    log_message "✅ PRESERVED: System volume indexing for app search"
+# Previously Disabled Media Services (2)
+log_message "--- Disabling Media Services ---"
+disable_service "com.apple.mediaanalysisd" "Media analysis"
+disable_service "com.apple.mediastream.mstreamd" "Media streaming"
+
+# SYSTEM-LEVEL SERVICES (LaunchDaemons) - Skipped in automated mode
+log_message "--- System-Level Services (Skipping - No sudo in automated mode) ---"
+log_message "ℹ️  System-level services require sudo and are skipped during automated runs"
+log_message "💡 To disable system services, run the script manually: /Users/jay/Documents/Mac_Tools/Bloat_Service/disable_bloat_services.sh"
+# disable_system_service "com.apple.wifianalyticsd" "WiFi Analytics"
+# disable_system_service "com.apple.icloud.findmydeviced" "Find My Device (System)"
+# disable_system_service "com.apple.ecosystemanalyticsd" "Ecosystem Analytics"
+# disable_system_service "com.apple.findmy.findmybeaconingd" "Find My Beaconing"
+# disable_system_service "com.apple.diagnosticservicesd" "Diagnostic Services"
+# disable_system_service "com.apple.osanalytics.osanalyticshelper" "OS Analytics Helper"
+# disable_system_service "com.apple.findmymacd" "Find My Mac"
+# disable_system_service "com.apple.findmymacmessenger" "Find My Mac Messenger"
+# disable_system_service "com.apple.analyticsd" "Analytics Daemon"
+# disable_system_service "com.apple.audioanalyticsd" "Audio Analytics"
+# disable_system_service "com.apple.usbctelemetryd" "USB-C Telemetry"
+
+# KILL RUNNING PROCESSES
+log_message "--- Killing Running Bloat Processes ---"
+kill_process "analyticsagent" "Analytics Agent"
+kill_process "siriinferenced" "Siri Inference"
+kill_process "siriactionsd" "Siri Actions"
+kill_process "findmylocateagent" "Find My Location"
+kill_process "findmydevice-user-agent" "Find My Device Agent"
+kill_process "proactived" "Proactive Suggestions"
+kill_process "intelligenceplatformd" "Apple Intelligence"
+kill_process "feedbackd" "Feedback Daemon"
+kill_process "knowledge-agent" "Knowledge Agent"
+kill_process "diagnostics_agent" "Diagnostics Agent"
+kill_process "duetexpertd" "Duet Expert"
+kill_process "rapportd" "Handoff/Continuity"
+kill_process "sirittsd" "Siri TTS"
+kill_process "spotlightknowledged" "Spotlight Knowledge"
+kill_process "wifianalyticsd" "WiFi Analytics"
+kill_process "ecosystemanalyticsd" "Ecosystem Analytics"
+kill_process "osanalyticshelper" "OS Analytics Helper"
+kill_process "geoanalyticsd" "Geo Analytics"
+kill_process "mediaanalysisd" "Media Analysis"
+kill_process "inputanalyticsd" "Input Analytics"
+
+# iTunes/Music Related Processes
+log_message "--- Killing iTunes/Music Related Processes ---"
+kill_process "commerce" "iTunes Commerce"
+kill_process "itunescloudd" "iTunes Cloud"
+kill_process "mediaremoteagent" "Media Remote"
+kill_process "Music" "Music App"
+kill_process "com.apple.Music" "Music Service"
+
+# Spotlight Related Processes (if you want to reduce indexing)
+log_message "--- Killing Spotlight Related Processes (Optional) ---"
+kill_process "mdworker" "Spotlight Worker"
+kill_process "mds_stores" "Spotlight Stores"
+kill_process "corespotlightd" "Core Spotlight"
+kill_process "managedcorespotlightd" "Managed Core Spotlight"
+
+log_message "=== Summary ==="
+log_message "Processes killed: $PROCESSES_KILLED"
+log_message "Processes protected: $PROCESSES_SKIPPED"
+log_message "Services disabled: $SERVICES_DISABLED"
+log_message "Services failed: $SERVICES_FAILED"
+log_message "Total services processed: $((SERVICES_DISABLED + SERVICES_FAILED))"
+log_message "🛡️  System update protection: ENABLED"
+log_message "=== Bloat Service Disabler Complete ==="
+
+# Verify essential services are still running
+log_message "--- Verifying Essential Services ---"
+if launchctl print "gui/$(id -u)" | grep -q "com.apple.sharingd" 2>/dev/null; then
+    log_message "✅ KEPT: com.apple.sharingd - AirDrop/Sharing (as requested)"
 else
-    log_message "⚠️  WARNING: Could not ensure system volume indexing"
+    log_message "⚠️  WARNING: com.apple.sharingd not found"
 fi
 
-# Disable indexing on user data volumes to save resources
-USER_DATA_PATHS=(
-    "$HOME/Documents"
-    "$HOME/Downloads" 
-    "$HOME/Desktop"
-    "$HOME/Pictures"
-    "$HOME/Movies"
-    "$HOME/Music"
-)
-
-for path in "${USER_DATA_PATHS[@]}"; do
-    if [ -d "$path" ]; then
-        if sudo mdutil -i off "$path" 2>/dev/null; then
-            log_message "✅ Disabled heavy indexing on $path"
-        else
-            log_message "ℹ️  INFO: Could not disable indexing on $path - may not be indexed"
-        fi
-    fi
-done
-
-# Verification of killed processes
-verify_processes_killed() {
-    sleep 3
-    local still_running=0
-    for proc in "${HIGH_RESOURCE_PROCS[@]}"; do
-        if pgrep -f "$proc" >/dev/null 2>&1; then
-            log_message "⚠️  STILL RUNNING: $proc (may need stronger disable)"
-            ((still_running++))
-        fi
-    done
-    log_message "📊 Processes still running after kill: $still_running"
-}
-
-# Add enhanced processor killer
-kill_process_enhanced() {
-    local proc="$1"
-    pkill -f "^$proc$" 2>/dev/null
-    pkill -f "$proc\..*" 2>/dev/null
-    pkill -f ".*$proc.*" 2>/dev/null
-}
-
-# Note: Spotlight categories left at system defaults for better compatibility
-log_message "✅ Spotlight categories left at system defaults for optimal CMD+Space functionality"
-
-# --- 3. Disable User-Level Services (LaunchAgents) ---
-log_message "🎯 DISABLING USER-LEVEL BLOAT SERVICES..."
-for svc in "${ALL_USER_SERVICES[@]}"; do
-    disable_service "$svc"
-done
-
-# --- 4. Disable System-Level Services (LaunchDaemons) ---
-log_message "🔴 DISABLING SYSTEM-LEVEL BLOAT SERVICES..."
-for svc in "${ALL_SYSTEM_SERVICES[@]}"; do
-    disable_system_service "$svc"
-done
-
-# --- 5. Kill Running Processes (PRIORITY: High-Resource First) ---
-log_message "💀 PRIORITY KILL: Highest Resource Consumers..."
-for proc in "${HIGH_RESOURCE_PROCS[@]}"; do
-    kill_process_enhanced "$proc"
-done
-
-log_message "💀 KILLING REMAINING BLOAT PROCESSES (DEDUPLICATED)..."
-for proc in "${DEDUPLICATED_PROCS[@]}"; do
-    # Skip if already killed in high-resource phase
-    already_killed=false
-    for high_proc in "${HIGH_RESOURCE_PROCS[@]}"; do
-        if [ "$proc" = "$high_proc" ]; then
-            already_killed=true
-            break
-        fi
-    done
-    
-    if [ "$already_killed" = false ]; then
-        kill_process_enhanced "$proc"
-    fi
-done
-
-# --- 5.1. Verify processes were killed ---
-log_message "🔍 VERIFYING PROCESSES KILLED..."
-verify_processes_killed
-
-# --- 6. Essential Services Health Check ---
-log_message "🛡️  VERIFYING ESSENTIAL SERVICES..."
-
-# Check preserved services
-ESSENTIAL_SERVICES=(
-    "com.apple.sharingd"                    # AirDrop/Sharing
-    "com.apple.exchange.exchangesyncd"      # Exchange Sync
-    "com.apple.locationd"                   # Location Services
-)
-
-for essential in "${ESSENTIAL_SERVICES[@]}"; do
-    if launchctl print "gui/$(id -u)" 2>/dev/null | grep -q "$essential" 2>/dev/null; then
-        log_message "✅ PRESERVED: $essential"
-    else
-        log_message "ℹ️  INFO: $essential not found (may not be active)"
-    fi
-done
-
-# Check if Apple Mail daemon is preserved (maild should be running for Office 365)
-if ps aux | grep -v grep | grep -q "maild" 2>/dev/null; then
-    log_message "✅ PRESERVED: Apple Mail daemon (Office 365 support)"
+if launchctl print "gui/$(id -u)" | grep -q "com.apple.exchange.exchangesyncd" 2>/dev/null; then
+    log_message "✅ KEPT: com.apple.exchange.exchangesyncd - Exchange Sync (as requested)"
 else
-    log_message "ℹ️  INFO: Apple Mail daemon not found"
+    log_message "ℹ️  INFO: com.apple.exchange.exchangesyncd not found (may not be needed)"
 fi
-
-# --- 7. Capture final performance metrics ---
-sleep 2  # Brief pause for system to stabilize
-capture_performance_metrics "AFTER"
-
-# --- 8. Execution Summary ---
-log_message "=========================================="
-log_message "EXECUTION SUMMARY"
-log_message "=========================================="
-log_message "✅ Minimal Spotlight configured (CMD+Space working, heavy AI indexing disabled)"
-log_message "📊 Services disabled: $SERVICES_DISABLED | Failed: $SERVICES_FAILED"
-log_message "💀 Processes killed: $PROCESSES_KILLED | Failed: $PROCESSES_FAILED"
-log_message "🔄 Total processes processed: ${#DEDUPLICATED_PROCS[@]} (deduplicated from ${#ALL_BLOAT_PROCS[@]})"
-log_message "✅ Essential services preserved (including app search functionality)"
-
-# Function to calculate and display success rates
-display_success_rates() {
-    if [ $((SERVICES_DISABLED + SERVICES_FAILED)) -gt 0 ]; then
-        local service_success_rate=$((SERVICES_DISABLED * 100 / (SERVICES_DISABLED + SERVICES_FAILED)))
-        log_message "📈 Service disable success rate: ${service_success_rate}%"
-    fi
-
-    if [ $((PROCESSES_KILLED + PROCESSES_FAILED)) -gt 0 ]; then
-        local process_success_rate=$((PROCESSES_KILLED * 100 / (PROCESSES_KILLED + PROCESSES_FAILED)))
-        log_message "📈 Process kill success rate: ${process_success_rate}%"
-    fi
-}
-
-# Calculate success rate
-display_success_rates
-
-log_message "=========================================="
-log_message "macOS Tahoe 26.0 Bloat Service Disabler v$SCRIPT_VERSION Complete"
-log_message "=========================================="
-log_message "Log file: $LOG_FILE"
-log_message "💡 TIP: Run 'sudo restore_macos_services.sh' to undo these changes"
 
 exit 0

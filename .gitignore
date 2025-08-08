@@ -1,81 +1,29 @@
-# macOS Tahoe 26.0 Bloat Service Disabler - .gitignore
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
 
 # Log Files
 *.log
-/Library/Logs/
-/var/log/
-~/Library/Logs/
-
-# macOS System Files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
 # Temporary Files
 *.tmp
 *.temp
 *~
-.#*
-\#*#
 
-# User-specific files
+# LaunchAgent plist files (may contain user-specific paths)
+*.plist
+
+# User-specific configuration
+config/
+local/
+
+# IDE/Editor Files
 .vscode/
 .idea/
-*.sublime-*
-
-# Backup files
-*.bak
-*.backup
-*.orig
-
-# Cache directories
-cache/
-caches/
-/Users/*/Library/Caches/
-
-# System-specific files (don't commit personal paths)
-**/Users/*/
-
-# LaunchDaemon/LaunchAgent files (already in repo, but ignore if copied to system)
-/Library/LaunchDaemons/com.user.disablebloatservices.plist
-/Users/*/Library/LaunchAgents/com.user.disablebloatservices.agent.plist
-
-# Compiled scripts or executables
-*.command
-*.app/
-
-# Archive files
-*.zip
-*.tar.gz
-*.tar.bz2
-*.tgz
-
-# Editor temporary files
-.swp
-.swo
-*~
 *.swp
 *.swo
 
-# OS generated files
-Icon?
-Icon\r\r
-
-# Folder config file
-[Dd]esktop.ini
-
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# Windows Installer files
-*.cab
-*.msi
-*.msm
-*.msp
-
-# Windows shortcuts
-*.lnk 
+# Backup Files
+*.bak
+*.backup
