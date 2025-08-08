@@ -31,17 +31,21 @@ clean_cache() {
     local keep_recent="${3:-false}"
     
     if [ -d "$cache_dir" ]; then
-        local size_before=$(get_dir_size "$cache_dir")
-        
+        local size_before
+        size_before=$(get_dir_size "$cache_dir")
+
         if [ "$keep_recent" = "true" ]; then
             # Keep files newer than 7 days
-            find "$cache_dir" -type f -mtime +7 -delete 2>/dev/null
+            find "${cache_dir:?}" -type f -mtime +7 -delete 2>/dev/null
         else
-            # Remove all cache files
-            find "$cache_dir" -mindepth 1 -delete 2>/dev/null
+
+            # Remove all cache files safely
+            rm -rf "${cache_dir:?}/"* 2>/dev/null
+        main
         fi
-        
-        local size_after=$(get_dir_size "$cache_dir")
+
+        local size_after
+        size_after=$(get_dir_size "$cache_dir")
         local freed=$((size_before - size_after))
         TOTAL_FREED=$((TOTAL_FREED + freed))
         
