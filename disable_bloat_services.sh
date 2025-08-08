@@ -7,6 +7,7 @@
 # Created: $(date)
 
 LOG_FILE="$HOME/Library/Logs/disable_bloat_services.log"
+SCRIPT_PATH="${SCRIPT_PATH:-/usr/local/bin/disable_bloat_services.sh}"
 # Ensure log directory exists
 mkdir -p "$(dirname "$LOG_FILE")"
 SERVICES_DISABLED=0
@@ -269,7 +270,7 @@ disable_service "com.apple.mediastream.mstreamd" "Media streaming"
 # SYSTEM-LEVEL SERVICES (LaunchDaemons) - Skipped in automated mode
 log_message "--- System-Level Services (Skipping - No sudo in automated mode) ---"
 log_message "ℹ️  System-level services require sudo and are skipped during automated runs"
-log_message "💡 To disable system services, run the script manually: /Users/jay/Documents/Mac_Tools/Bloat_Service/disable_bloat_services.sh"
+log_message "💡 To disable system services, run the script manually: $SCRIPT_PATH"
 # disable_system_service "com.apple.wifianalyticsd" "WiFi Analytics"
 # disable_system_service "com.apple.icloud.findmydeviced" "Find My Device (System)"
 # disable_system_service "com.apple.ecosystemanalyticsd" "Ecosystem Analytics"
