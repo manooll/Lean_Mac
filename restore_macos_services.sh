@@ -336,7 +336,7 @@ log_message "🔍 Key services verified: $enabled_count/$(echo ${#check_services
 
 # Calculate success rate
 if [ $((SERVICES_ENABLED + SERVICES_FAILED)) -gt 0 ]; then
-    local success_rate=$((SERVICES_ENABLED * 100 / (SERVICES_ENABLED + SERVICES_FAILED)))
+    success_rate=$((SERVICES_ENABLED * 100 / (SERVICES_ENABLED + SERVICES_FAILED)))
     log_message "📈 Service restoration success rate: ${success_rate}%"
 fi
 
