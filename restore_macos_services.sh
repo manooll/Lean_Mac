@@ -246,6 +246,17 @@ stop_bloat_disabler() {
     done
 }
 
+# Helper to calculate and log the service restoration success rate
+log_success_rate() {
+    local enabled="$1"
+    local failed="$2"
+
+    if [ $((enabled + failed)) -gt 0 ]; then
+        local rate=$((enabled * 100 / (enabled + failed)))
+        log_message "📈 Service restoration success rate: ${rate}%"
+    fi
+}
+
 # --- Core Execution ---
 
 log_message "=========================================="
@@ -334,13 +345,11 @@ log_message "RESTORATION SUMMARY"
 log_message "=========================================="
 log_message "🟢 Services enabled: $SERVICES_ENABLED | Failed: $SERVICES_FAILED"
 log_message "✅ Spotlight indexing restored on all volumes"
+
 log_message "🔍 Key services verified: $enabled_count/$(echo ${#check_services[@]})"
 
 # Calculate success rate
-if [ $((SERVICES_ENABLED + SERVICES_FAILED)) -gt 0 ]; then
-    success_rate=$((SERVICES_ENABLED * 100 / (SERVICES_ENABLED + SERVICES_FAILED)))
-    log_message "📈 Service restoration success rate: ${success_rate}%"
-fi
+log_success_rate "$SERVICES_ENABLED" "$SERVICES_FAILED"
 
 log_message "=========================================="
 log_message "⚠️  IMPORTANT POST-RESTORATION NOTES"
