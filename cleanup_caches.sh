@@ -5,6 +5,8 @@
 # Created: $(date)
 
 LOG_FILE="$HOME/Library/Logs/cache_cleanup.log"
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
 TOTAL_FREED=0
 
 # Function to log messages
@@ -36,8 +38,10 @@ clean_cache() {
             # Keep files newer than 7 days
             find "${cache_dir:?}" -type f -mtime +7 -delete 2>/dev/null
         else
+
             # Remove all cache files safely
             rm -rf "${cache_dir:?}/"* 2>/dev/null
+        main
         fi
 
         local size_after
@@ -93,7 +97,7 @@ clean_cache "$HOME/Library/Saved Application State" "App State Files"
 log_message "--- Emptying Trash ---"
 if [ -d "$HOME/.Trash" ]; then
     trash_size=$(get_dir_size "$HOME/.Trash")
-    rm -rf "$HOME/.Trash"/* 2>/dev/null
+    find "$HOME/.Trash" -mindepth 1 -delete 2>/dev/null
     TOTAL_FREED=$((TOTAL_FREED + trash_size))
     log_message "🗑️  EMPTIED: Trash - ${trash_size}MB freed"
 fi

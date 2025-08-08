@@ -216,22 +216,29 @@ EOF
 # Function to load services
 load_services() {
     print_title "Loading services..."
-    
+
     local actual_user=$(get_actual_user)
     local user_home=$(get_user_home)
-    
-    # Load LaunchDaemon (system-wide)
-    if launchctl load "$DAEMON_PLIST_DIR/com.user.disablebloatservices.plist" 2>/dev/null; then
-        print_status "✅ Loaded: System-wide LaunchDaemon"
+    local user_uid=$(id -u "$actual_user")
+
+    # Bootstrap LaunchDaemon (system-wide)
+    if launchctl bootstrap system "$DAEMON_PLIST_DIR/com.user.disablebloatservices.plist" 2>/dev/null; then
+        print_status "✅ Bootstrapped: System-wide LaunchDaemon"
     else
-        print_warning "⚠️  LaunchDaemon may already be loaded or failed to load"
+        print_warning "⚠️  LaunchDaemon may already be running or failed to bootstrap"
     fi
-    
-    # Load LaunchAgent (user-specific) - run as actual user
-    if sudo -u "$actual_user" launchctl load "$user_home/Library/LaunchAgents/com.user.disablebloatservices.agent.plist" 2>/dev/null; then
-        print_status "✅ Loaded: User-specific LaunchAgent"
+
+    # Bootstrap LaunchAgent (user-specific)
+    local agent_plist="$user_home/Library/LaunchAgents/com.user.disablebloatservices.agent.plist"
+    if sudo -u "$actual_user" launchctl bootstrap "gui/$user_uid" "$agent_plist" 2>/dev/null; then
+        print_status "✅ Bootstrapped: User-specific LaunchAgent"
     else
-        print_warning "⚠️  LaunchAgent may already be loaded or failed to load"
+        print_warning "⚠️  LaunchAgent may already be running or failed to bootstrap; attempting kickstart..."
+        if sudo -u "$actual_user" launchctl kickstart -k "gui/$user_uid/com.user.disablebloatservices" 2>/dev/null; then
+            print_status "✅ Kickstarted: User-specific LaunchAgent"
+        else
+            print_warning "⚠️  Failed to kickstart user LaunchAgent"
+        fi
     fi
 }
 

@@ -14,6 +14,8 @@
 # Repository: https://github.com/manooll/Lean_Mac
 
 LOG_FILE="$HOME/Library/Logs/restore_macos_services.log"
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
 SCRIPT_VERSION="1.0"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -270,7 +272,7 @@ stop_bloat_disabler
 
 # --- 2. Restore Spotlight indexing ---
 log_message "🔍 RESTORING SPOTLIGHT INDEXING ON ALL VOLUMES..."
-for vol in $(mdutil -sa 2>/dev/null | awk -F ':' '{print $1}'); do
+mdutil -sa 2>/dev/null | awk -F ':' '{print $1}' | while IFS= read -r vol; do
     if mdutil -i on "$vol" 2>/dev/null; then
         log_message "✅ Enabled indexing on $vol"
     else
@@ -336,7 +338,7 @@ log_message "🔍 Key services verified: $enabled_count/$(echo ${#check_services
 
 # Calculate success rate
 if [ $((SERVICES_ENABLED + SERVICES_FAILED)) -gt 0 ]; then
-    local success_rate=$((SERVICES_ENABLED * 100 / (SERVICES_ENABLED + SERVICES_FAILED)))
+    success_rate=$((SERVICES_ENABLED * 100 / (SERVICES_ENABLED + SERVICES_FAILED)))
     log_message "📈 Service restoration success rate: ${success_rate}%"
 fi
 
@@ -361,4 +363,4 @@ echo
 echo "✅ Restoration complete! System restart recommended."
 echo "📝 Check log file: $LOG_FILE"
 
-exit 0 
+exit 0
