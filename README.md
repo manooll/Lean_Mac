@@ -2,11 +2,11 @@
 
 [![macOS](https://img.shields.io/badge/macOS-Tahoe%2026.0-blue)](https://www.apple.com/macos/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.1-orange)](https://github.com/manooll/Lean_Mac/releases)
+[![Version](https://img.shields.io/badge/Version-2.3-orange)](https://github.com/manooll/Lean_Mac/releases)
 
 Is your Mac slower than it should be, heating up, or losing battery life too fast? You might be running dozens of hidden background processes—like Apple Intelligence and Spotlight AI—that eat up your resources even if you never use them.
 
-This tool automatically disables over 60 unnecessary system services and background apps in macOS Tahoe 26.0, freeing up your Mac to be faster, quieter, and more private—while keeping everything you actually use, like AirDrop, Mail, and device location.
+This tool automatically disables 29+ unnecessary user services and background processes in macOS Tahoe 26.0, freeing up your Mac to be faster, quieter, and more private—while keeping everything you actually use, like **AirDrop, Mail, Exchange sync, and device location**.
 
 ## 🚀 How does it help?
 
@@ -24,14 +24,15 @@ This tool specifically disables the biggest resource consumers on macOS Tahoe 26
 - **Cloud sync services** that constantly run in background
 - **Analytics and telemetry** collection services
 - **Media analysis** and processing daemons
-- **60+ unnecessary background processes**
+- **29+ user-level services** (system services require manual execution)
 
 ## 📦 Components
 
 ### 1. **Bloat Service Disabler** (`disable_bloat_services.sh`)
-- Disables 60+ unnecessary services and processes
+- Disables 29+ unnecessary user services and processes
 - Runs continuously (60s system-wide, 5min user-specific)
-- Preserves essential services (AirDrop, Mail, Find My)
+- **CRITICAL FIX**: Preserves Apple Mail sync services
+- **NEW**: System update protection - won't interfere with updates
 - Targets highest CPU consumers first
 
 ### 2. **Cache Cleanup Utility** (`cleanup_caches.sh`)
@@ -103,14 +104,14 @@ After installation, the system runs automatically:
 
 ### Manual Commands
 ```bash
-# Run bloat service disabler
+# Run bloat service disabler (includes system services when run manually)
 sudo disable_bloat_services.sh
 
 # Clean system caches
 sudo cleanup_caches.sh
 
-# Uninstall completely
-sudo uninstall_bloat_disabler.sh
+# Restore disabled services
+sudo restore_macos_services.sh
 ```
 
 ### Service Management
@@ -149,13 +150,16 @@ tail -f ~/Library/Logs/cache_cleanup.log
 
 ### Preserved Essential Services
 - **AirDrop/Sharing**: `com.apple.sharingd`
-- **Mail**: Apple Mail functionality preserved
-- **Find My**: Device location services preserved
-- **Exchange Sync**: Enterprise email sync preserved
+- **Mail Services**: `com.apple.cloudd`, `com.apple.icloudmailagent`, `com.apple.syncdefaultsd`
+- **Mail Encryption**: `com.apple.protectedcloudstorage.protectedcloudkeysyncing`
+- **Exchange Sync**: `com.apple.exchange.exchangesyncd`
+- **System Updates**: Protected from interference during updates
 
 ### Safe Operation
 - Non-destructive: Only disables services, doesn't delete files
-- Reversible: Includes complete uninstaller
+- **System Update Safe**: Automatically detects and avoids running during updates
+- **Process Protection**: 47+ critical system processes are protected from termination
+- Reversible: Includes complete restoration script
 - Logged: All actions are logged for review
 - Tested: Extensively tested on macOS Tahoe 26.0
 
@@ -173,11 +177,14 @@ tail -f ~/Library/Logs/cache_cleanup.log
 - `com.apple.spotlightknowledged`
 - Multiple spotlight worker processes
 
-### Cloud & Sync Services
-- `com.apple.cloudd`
-- `com.apple.cloudphotod`
-- `com.apple.itunescloudd`
-- `com.apple.cloudsettingssyncagent`
+### Cloud & Sync Services (Partially Disabled)
+- ✅ `com.apple.icloud.searchpartyuseragent` - Find My network
+- ✅ `com.apple.icloud.findmydeviced.findmydevice-user-agent` - Find My device
+- ✅ `com.apple.findmy.findmylocateagent` - Find My location
+- ✅ `com.apple.itunescloudd` - iTunes/Music cloud sync
+- ❌ **PRESERVED**: `com.apple.cloudd` - Required for iCloud Mail
+- ❌ **PRESERVED**: `com.apple.icloudmailagent` - Required for iCloud Mail
+- ❌ **PRESERVED**: `com.apple.syncdefaultsd` - Required for Mail sync
 
 ### Analytics & Telemetry
 - `com.apple.analyticsagent`
@@ -288,14 +295,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📈 Version History
 
-### v2.1 (Current)
+### v2.3 (Current) - CRITICAL FIX
+- **CRITICAL FIX**: Preserve Apple Mail sync services (`cloudd`, `icloudmailagent`, `syncdefaultsd`)
+- **System Update Protection**: Automatically detects and prevents interference with system updates
+- **Enhanced Process Protection**: 47+ critical system processes protected from termination
+- **Improved Mail Compatibility**: Exchange sync and iCloud Mail services preserved
+- **Safer Service Management**: Gentler process termination (SIGTERM before SIGKILL)
+- **Update Detection**: Monitors for active installations, downloads, and updates
+- **Enhanced Logging**: Better error handling and detailed operation logging
+- **Performance Tracking**: Real-time statistics showing services disabled and processes killed
+
+### v2.1
 - **Enhanced Performance**: Deduplication, wildcards, and comprehensive performance metrics
 - **Shell Compatibility Fixes**: Replaced `readarray` with compatible `while` loop for system shell
 - **Variable Scope Improvements**: Fixed `local` variable usage outside functions
 - **Process Protection Logic**: Fixed Adobe process targeting (Adobe ACCFinderSync now properly eliminated)
 - **Enhanced Process Targeting**: Added Figma agents and improved process identification
 - **Success Rate Tracking**: Real-time statistics showing services disabled and processes killed
-- **Logging Enhancements**: Better error handling and detailed operation logging
 - **System Optimization**: CPU usage reduced, memory optimized, improved battery life
 - **Automatic Restart Protection**: Prevents eliminated processes from restarting
 - **Performance Reporting**: Shows before/after process counts and success rates
