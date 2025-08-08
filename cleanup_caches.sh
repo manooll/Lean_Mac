@@ -36,7 +36,7 @@ clean_cache() {
             find "$cache_dir" -type f -mtime +7 -delete 2>/dev/null
         else
             # Remove all cache files
-            rm -rf "$cache_dir"/* 2>/dev/null
+            find "$cache_dir" -mindepth 1 -delete 2>/dev/null
         fi
         
         local size_after=$(get_dir_size "$cache_dir")
@@ -91,7 +91,7 @@ clean_cache "$HOME/Library/Saved Application State" "App State Files"
 log_message "--- Emptying Trash ---"
 if [ -d "$HOME/.Trash" ]; then
     trash_size=$(get_dir_size "$HOME/.Trash")
-    rm -rf "$HOME/.Trash"/* 2>/dev/null
+    find "$HOME/.Trash" -mindepth 1 -delete 2>/dev/null
     TOTAL_FREED=$((TOTAL_FREED + trash_size))
     log_message "🗑️  EMPTIED: Trash - ${trash_size}MB freed"
 fi
