@@ -3,15 +3,17 @@
 # macOS Tahoe 26.0 Service Restore Script
 # Version: 1.0 - Companion to Bloat Service Disabler
 # Purpose: Restore all services and functionality disabled by the bloat disabler
-# 
+#
 # This script will:
 # - Re-enable all disabled services
 # - Restore Spotlight indexing
 # - Provide system health verification
-# 
+#
 # Author: Jay L. [Manull]
 # License: MIT
 # Repository: https://github.com/manooll/Lean_Mac
+
+set -euo pipefail
 
 LOG_FILE="$HOME/Library/Logs/restore_macos_services.log"
 # Ensure log directory exists
@@ -127,19 +129,19 @@ capture_performance_metrics() {
     log_message "📊 PERFORMANCE METRICS ($label):"
     
     # CPU usage snapshot
-    local cpu_usage=$(top -l 1 -s 0 | grep "CPU usage" | head -1)
+    local cpu_usage=$(top -l 1 -s 0 | grep "CPU usage" | head -1 || true)
     log_message "CPU: $cpu_usage"
     
     # Memory usage
-    local memory_info=$(vm_stat | head -5 | tr '\n' ' ')
+    local memory_info=$(vm_stat | head -5 | tr '\n' ' ' || true)
     log_message "Memory: $memory_info"
     
     # Process count
-    local proc_count=$(ps aux | wc -l)
+    local proc_count=$(ps aux | wc -l || true)
     log_message "Process count: $proc_count"
     
     # Disk space
-    local disk_usage=$(df -h / | tail -1 | awk '{print "Used: "$3" Available: "$4" ("$5" full)"}')
+    local disk_usage=$(df -h / | tail -1 | awk '{print "Used: "$3" Available: "$4" ("$5" full)"}' || true)
     log_message "Disk: $disk_usage"
 }
 
@@ -149,7 +151,7 @@ enable_service() {
     local enabled=false
     
     # Get all logged-in users
-    for user_id in $(ps -axo uid,comm | grep loginwindow | awk '{print $1}' | sort -u); do
+    for user_id in $(ps -axo uid,comm | grep loginwindow | awk '{print $1}' | sort -u || true); do
         if [[ "$user_id" =~ ^[0-9]+$ ]] && [ "$user_id" -ge 500 ]; then
             # Try to enable for this user
             if launchctl enable "gui/$user_id/$service_name" 2>/dev/null; then
@@ -289,7 +291,7 @@ mdutil -sa 2>/dev/null | awk -F ':' '{print $1}' | while IFS= read -r vol; do
     else
         log_message "❌ Failed to enable indexing on $vol"
     fi
-done
+done || true
 
 # --- 3. Enable User-Level Services ---
 log_message "🟢 ENABLING USER-LEVEL SERVICES..."
