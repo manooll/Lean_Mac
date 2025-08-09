@@ -172,43 +172,29 @@ disable_service() {
     fi
 }
 
-# Function to check if system updates are currently running
+# Function to check if macOS system updates are running
 check_system_updates() {
-    # Check for actual active installation/update processes (not background daemons)
-    local active_update_processes=("installer" "mas install" "pkgutil" "pkgbuild")
-    
-    for proc in "${active_update_processes[@]}"; do
-        if pgrep -f "$proc" > /dev/null 2>&1; then
-            local pids=$(pgrep -f "$proc")
-            log_message "⚠️  ACTIVE UPDATE DETECTED: $proc (PIDs: $pids)"
-            log_message "🛑 ABORTING: Will not run debloat service during active installations"
-            log_message "💡 TIP: Try running again after installations complete"
+    # Only look for known update/installer processes and match them exactly
+    local update_processes=(
+        "softwareupdate"    # Command line macOS updater
+        "InstallAssistant"  # macOS GUI installer
+        "Installer"         # macOS package installer
+    )
+
+    for proc in "${update_processes[@]}"; do
+        if pgrep -x "$proc" >/dev/null 2>&1; then
+            local pids
+            pids=$(pgrep -x "$proc")
+            log_message "⚠️  ACTIVE SYSTEM UPDATE DETECTED: $proc (PIDs: $pids)"
+            log_message "🛑 ABORTING: Will not run debloat service during system updates"
+            log_message "💡 TIP: Try running again after updates complete"
             exit 0
         fi
     done
-    
-    # Check for active softwareupdate processes (not the background daemon)
-    # Look for actual download/install activity
-    if pgrep -f "softwareupdate.*-[id]" > /dev/null 2>&1; then
-        local pids=$(pgrep -f "softwareupdate.*-[id]")
-        log_message "⚠️  ACTIVE SOFTWARE UPDATE DETECTED: softwareupdate (PIDs: $pids)"
-        log_message "🛑 ABORTING: Will not run debloat service during software updates"
-        log_message "💡 TIP: Try running again after updates complete"
-        exit 0
-    fi
-    
-    # Check if macOS installer is running
-    if pgrep -f "Install macOS" > /dev/null 2>&1 || pgrep -f "macOS.*Installer" > /dev/null 2>&1; then
+
+    # Check specifically for macOS installer apps by their window title
+    if pgrep -f "Install macOS" >/dev/null 2>&1; then
         log_message "⚠️  macOS INSTALLER DETECTED - Aborting debloat service"
-        exit 0
-    fi
-    
-    # Check for high mobileassetd CPU usage (indicates active downloading)
-    local mobileasset_cpu=$(ps -eo pid,pcpu,comm | grep mobileassetd | awk '{if($2 > 5.0) print $1}' | head -1 || true)
-    if [ -n "$mobileasset_cpu" ]; then
-        log_message "⚠️  HIGH MOBILEASSETD ACTIVITY DETECTED - Likely downloading updates"
-        log_message "🛑 ABORTING: Will not run debloat service during asset downloads"
-        log_message "💡 TIP: Try running again after downloads complete"
         exit 0
     fi
 }
