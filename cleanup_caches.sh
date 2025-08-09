@@ -4,6 +4,8 @@
 # Cleans up heavy cache directories to free disk space
 # Created: $(date)
 
+set -euo pipefail
+
 LOG_FILE="$HOME/Library/Logs/cache_cleanup.log"
 # Ensure log directory exists
 mkdir -p "$(dirname "$LOG_FILE")"
@@ -41,7 +43,6 @@ clean_cache() {
 
             # Remove all cache files safely
             rm -rf "${cache_dir:?}/"* 2>/dev/null
-        main
         fi
 
         local size_after
@@ -117,14 +118,14 @@ fi
 log_message "--- Running System Maintenance ---"
 if command -v brew >/dev/null 2>&1; then
     log_message "🍺 RUNNING: Homebrew cleanup"
-    brew cleanup --prune=all >/dev/null 2>&1
+    brew cleanup --prune=all >/dev/null 2>&1 || true
     log_message "🍺 COMPLETED: Homebrew cleanup"
 fi
 
 # Docker cleanup if installed
 if command -v docker >/dev/null 2>&1; then
     log_message "🐳 RUNNING: Docker cleanup"
-    docker system prune -f >/dev/null 2>&1
+    docker system prune -f >/dev/null 2>&1 || true
     log_message "🐳 COMPLETED: Docker cleanup"
 fi
 

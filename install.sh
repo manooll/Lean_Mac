@@ -2,18 +2,18 @@
 
 # macOS Tahoe 26.0 Bloat Service Disabler - Installation Script
 # Version: 2.1
-# 
+#
 # This script installs the macOS Bloat Service Disabler system including:
 # - Main bloat service disabler script
 # - Cache cleanup utility (separate)
 # - LaunchDaemon for system-wide operation
 # - LaunchAgent for user-specific operation
-# 
+#
 # Author: Jay L. [Manull]
 # License: MIT
 # Repository: https://github.com/manooll/Lean_Mac.git
 
-set -e  # Exit on any error
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -57,7 +57,7 @@ check_root() {
 
 # Function to get the actual user (not root when using sudo)
 get_actual_user() {
-    if [ -n "$SUDO_USER" ]; then
+    if [ -n "${SUDO_USER:-}" ]; then
         echo "$SUDO_USER"
     else
         echo "$(whoami)"

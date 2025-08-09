@@ -6,6 +6,8 @@
 # UPDATED: Added system update protection and safer process handling
 # Created: $(date)
 
+set -euo pipefail
+
 LOG_FILE="$HOME/Library/Logs/disable_bloat_services.log"
 # Ensure log directory exists
 mkdir -p "$(dirname "$LOG_FILE")"
@@ -134,7 +136,7 @@ disable_service() {
     local disabled=false
     
     # Get all logged-in users
-    for user_id in $(ps -axo uid,comm | grep loginwindow | awk '{print $1}' | sort -u); do
+    for user_id in $(ps -axo uid,comm | grep loginwindow | awk '{print $1}' | sort -u || true); do
         if [[ "$user_id" =~ ^[0-9]+$ ]] && [ "$user_id" -ge 500 ]; then
             # Try to disable for this user
             if launchctl print "gui/$user_id" 2>/dev/null | grep -q "$service_name" 2>/dev/null; then
@@ -201,7 +203,7 @@ check_system_updates() {
     fi
     
     # Check for high mobileassetd CPU usage (indicates active downloading)
-    local mobileasset_cpu=$(ps -eo pid,pcpu,comm | grep mobileassetd | awk '{if($2 > 5.0) print $1}' | head -1)
+    local mobileasset_cpu=$(ps -eo pid,pcpu,comm | grep mobileassetd | awk '{if($2 > 5.0) print $1}' | head -1 || true)
     if [ -n "$mobileasset_cpu" ]; then
         log_message "⚠️  HIGH MOBILEASSETD ACTIVITY DETECTED - Likely downloading updates"
         log_message "🛑 ABORTING: Will not run debloat service during asset downloads"
