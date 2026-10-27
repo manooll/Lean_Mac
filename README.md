@@ -1,16 +1,16 @@
-# 🚀 macOS Tahoe 26.0 Bloat Service Disabler
+# 🚀 macOS Tahoe 26/27 Bloat Service Disabler
 
-[![macOS](https://img.shields.io/badge/macOS-Tahoe%2026.0-blue)](https://www.apple.com/macos/) [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) [![Version](https://img.shields.io/badge/Version-2.3-orange)](https://github.com/manooll/Lean_Mac/releases)
+[![macOS](https://img.shields.io/badge/macOS-Tahoe%2026%2F27-blue)](https://www.apple.com/macos/) [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) [![Version](https://img.shields.io/badge/Version-2.4-orange)](https://github.com/realnoedelo/Lean_Mac/releases)
 
 > **Your Mac running hot? Battery draining fast? CPU spinning on "nothing"?**
 
-You're not imagining it. macOS Tahoe 26.0 ships with **29+ hidden background processes** chomping through your resources—Apple Intelligence, enhanced Spotlight AI, aggressive cloud sync—even when you never asked for them.
+macOS Tahoe 26.x and 27.x expose many background services through launchd. This tool inventories exact labels, disables the curated non-essential set, and reports what macOS SIP prevents from staying stopped.
 
 This tool surgically disables the resource hogs while keeping everything you actually use: **AirDrop, Mail, Exchange sync, device location**. Your Mac, but faster, quieter, and more private.
 
 **⚡ Install in seconds:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/manooll/Lean_Mac/main/install.sh -o install.sh && sudo bash install.sh
+curl -fsSL https://raw.githubusercontent.com/realnoedelo/Lean_Mac/main/install.sh -o install.sh && sudo bash install.sh
 ```
 
 ---
@@ -29,8 +29,8 @@ curl -fsSL https://raw.githubusercontent.com/manooll/Lean_Mac/main/install.sh -o
 
 ## ✨ Why You'll Love It
 
-- **⚡ 20-40% less CPU usage** in the background
-- **🔋 500MB-1GB RAM freed** for actual work  
+- **⚡ Targets background services** that are safe to disable on the current OS
+- **🔋 Reports target-process RSS and available-memory change** instead of promising a fixed gain
 - **💾 Dramatically reduced disk I/O** (goodbye constant SSD writes)
 - **🔒 Privacy restored** (analytics/telemetry disabled)
 - **🛡️ Smart & safe** - Preserves essentials, breaks nothing
@@ -49,21 +49,22 @@ privatecloudcomputed               # Private cloud compute
 intelligencetasksd                 # AI task scheduler
 ```
 
-### Enhanced Spotlight (The Disk Destroyers)  
+### Enhanced Spotlight (kept for image text search)
 ```
-mds_stores                         # Can spike to 60%+ CPU
-corespotlightservice               # Core spotlight with AI
-spotlightknowledged               # Knowledge-based search
-mdworker (multiple)               # Metadata workers gone wild
+mds_stores                         # Image/document metadata index
+corespotlightservice               # Core Spotlight index
+spotlightknowledged                # Knowledge-based search
+mdworker (multiple)                # Metadata workers
 ```
 
-### Cloud Sync Chaos
+### Cloud and media background work
 ```
 itunescloudd                      # iTunes/Music cloud sync
-icloud.searchpartyuseragent       # Find My network spam
-icloud.findmydeviced              # Find My device chatter
-findmy.findmylocateagent          # Location broadcasting
+mediaanalysisd                    # Photo and video analysis
 ```
+
+Mail, AirDrop, Exchange, Handoff, and Find My labels are inspected but
+explicitly protected. They are never part of the automatic disable set.
 
 ### Analytics & Telemetry (The Spies)
 ```
@@ -73,26 +74,31 @@ diagnostics_agent                 # Diagnostic data shipping
 wifianalyticsd                    # WiFi usage tracking
 ```
 
-### Media Processing Madness
+### Optional media and telemetry processing
 ```
-mediaanalysisd                    # Heavy CPU/RAM for photo analysis
 proactiveeventtrackerd           # Predictive behavior tracking
 geoanalyticsd                    # Location analytics
 memoryanalyticsd                 # Memory usage profiling
 ```
+
+`mediaanalysisd`, Visual Intelligence, Core Spotlight and metadata workers are
+kept enabled. macOS uses them for Live Text/OCR, Quick Look and searchable text
+extraction from JPEG/PNG files.
 
 ---
 
 ## 📦 What You Get
 
 ### 1️⃣ **Bloat Service Disabler** (`disable_bloat_services.sh`)
-- Kills 29+ background processes (targeting CPU hogs first)
-- Runs automatically: every 60s (system) / 5min (user)
-- **Critical fix:** Mail sync services preserved
+- Kills optional background processes (targeting CPU hogs first)
+- Runs automatically: once at login, then every 60s (system) / 5min (user)
+- **Critical fix:** Mail sync and Live Text/OCR services preserved
+- **Recovery:** re-enables protected labels left disabled by older releases
 - **Smart:** Won't interfere with system updates
 
 ### 2️⃣ **Cache Cleanup Utility** (`cleanup_caches.sh`)  
-- Purges Apple Intelligence caches, Spotlight junk, telemetry logs
+- Purges Apple Intelligence caches and telemetry logs. Spotlight and media
+  analysis data remain intact for Live Text/OCR and image search.
 - Run manually or schedule independently
 
 ### 3️⃣ **Installation System** (`install.sh`)
@@ -116,9 +122,18 @@ memoryanalyticsd                 # Memory usage profiling
 **Manual commands:**
 ```bash
 sudo disable_bloat_services.sh    # Run full sweep (includes system services)
+sudo disable_bloat_services.sh --profile safe       # Telemetry only
+sudo disable_bloat_services.sh --interactive         # Ask with impact per label
 sudo cleanup_caches.sh            # Purge system caches
 sudo restore_macos_services.sh    # Restore everything
 ```
+
+During installation the profile menu offers **Safe**, **Balanced** and
+**Custom**. Safe disables telemetry/diagnostics only. Balanced also disables
+optional Siri/Apple Intelligence and background helper groups. Custom asks for
+each group and stores the choice in `/usr/local/etc/lean_mac.conf`. The
+installer removes any previous Lean Mac jobs, restores their disabled labels
+when possible, and then installs the selected profile.
 
 **Service management:**
 ```bash
@@ -137,6 +152,8 @@ sudo launchctl unload /Library/LaunchDaemons/com.user.disablebloatservices.plist
 **Your essentials remain untouched:**
 - **Mail Services:** `cloudd`, `icloudmailagent`, `syncdefaultsd`, `protectedcloudkeysyncing`
 - **AirDrop/Sharing:** `sharingd`  
+- **Find My:** `searchpartyuseragent`, `findmydeviced`, `findmylocateagent`, `findmymac`
+- **Handoff/Continuity:** `rapportd`
 - **Exchange Sync:** `exchangesyncd`
 - **System Updates:** Protected from interference during updates
 - **47+ critical system processes** safe from termination
@@ -145,21 +162,26 @@ sudo launchctl unload /Library/LaunchDaemons/com.user.disablebloatservices.plist
 
 ## 📊 Performance Tracking
 
-**Real-time statistics:**
+Each run writes measured values to the log; values depend on current workload:
 ```
-Services disabled: 23/29 (79% success)
-Processes killed: 15/18 (83% success)
-Memory freed: 847MB  
-CPU usage reduction: 32%
+Services disabled: <count>
+Services already disabled: <count>
+Services re-enabled: <count>
+Processes killed: <count>
+Processes respawned/SIP-protected: <count>
+Available RAM before/after/change: <measured values>
+Target-process RSS before/after/change: <measured values>
 ```
 
 **Monitor the action:**
 ```bash
 # Watch system-wide changes
 tail -f /var/log/disable_bloat_services.log
+tail -f /var/log/disable_bloat_services.error.log
 
 # Monitor user-level changes  
 tail -f ~/Library/Logs/disable_bloat_services.log
+tail -f ~/Library/Logs/disable_bloat_services.error.log
 
 # Cache cleanup activity
 tail -f ~/Library/Logs/cache_cleanup.log
@@ -186,8 +208,23 @@ tail -f ~/Library/Logs/cache_cleanup.log
 - **Backup your system** (seriously, do this first)
 - **Test on non-critical hardware** if possible
 - **Read the code** - you're running this as root
-- **macOS Tahoe 26.0 only** (may work on others, YMMV)
+- **macOS Tahoe 26.x and 27.x supported** (including 27.2)
+- **SIP-protected Apple jobs may respawn**; the log reports them explicitly and does not count them as stopped
 - **Restart recommended** after installation for full effect
+
+### Service modes
+
+The automatic mode checks exact launchd labels and records disabled, failed,
+and missing services. For a read-only inventory of names discovered on the
+current Mac:
+
+```bash
+sudo disable_bloat_services.sh --list
+```
+
+To review each candidate before changing it, use `sudo disable_bloat_services.sh
+--interactive`. To validate the run without changing services or killing
+processes, use `sudo disable_bloat_services.sh --dry-run`.
 
 ---
 
@@ -197,6 +234,9 @@ tail -f ~/Library/Logs/cache_cleanup.log
 ```bash
 sudo launchctl list | grep -E "(intelligence|spotlight|cloud)"
 ```
+
+SIP-protected Apple jobs may respawn. The log labels these as
+`STILL RUNNING/RESPAWNED`; they are not reported as permanently stopped.
 
 **Still high CPU usage?**
 ```bash
@@ -209,13 +249,20 @@ sudo chown $(whoami):staff ~/Library/Logs/disable_bloat_services.log
 ```
 
 **Need help?**
-1. Check [Issues](https://github.com/manooll/Lean_Mac/issues) page
+1. Check [Issues](https://github.com/realnoedelo/Lean_Mac/issues) page
 2. Review log files for error messages
-3. Join [Discussions](https://github.com/manooll/Lean_Mac/discussions)
+3. Join [Discussions](https://github.com/realnoedelo/Lean_Mac/discussions)
 
 ---
 
 ## 📈 Version History
+
+### v2.4 - SAFE PERIODIC RUNNER
+- **Stopped the restart loop** by removing `KeepAlive=true` from the periodic LaunchDaemon
+- **Recovered protected services** that older releases had accidentally disabled
+- **Preserved Handoff/Continuity** (`rapportd`) alongside Mail, AirDrop, Exchange and Find My
+- **Fixed root GUI verification** so `gui/0` is never queried and error logs stay clean
+- **Expanded run accounting** with already-disabled, re-enabled and complete decision counts
 
 ### v2.3 - CRITICAL MAIL FIX 🚨
 - **Fixed Mail services** (`cloudd`, `icloudmailagent`, `syncdefaultsd` now preserved)
@@ -232,7 +279,7 @@ sudo chown $(whoami):staff ~/Library/Logs/disable_bloat_services.log
 - **Deduplication & wildcards** for better efficiency
 
 ### v2.0 - The GitHub Release
-- **Apple Intelligence support** for Tahoe 26.0
+- **Apple Intelligence support** for Tahoe 26.x and 27.x
 - **Consolidated installation** system
 - **Separate cache cleanup** utility
 - **Better logging** and error handling
@@ -245,14 +292,14 @@ Found a new bloat service? Performance issue? We want to hear about it.
 
 **Quick start:**
 ```bash
-git clone https://github.com/manooll/Lean_Mac.git
+git clone https://github.com/realnoedelo/Lean_Mac.git
 cd Lean_Mac
 sudo ./install.sh  # Test on a VM first!
 ```
 
 **Get involved:**
-- [Report Issues](https://github.com/manooll/Lean_Mac/issues)
-- [Join Discussions](https://github.com/manooll/Lean_Mac/discussions)
+- [Report Issues](https://github.com/realnoedelo/Lean_Mac/issues)
+- [Join Discussions](https://github.com/realnoedelo/Lean_Mac/discussions)
 - Submit PRs with improvements
 
 ## 🧪 Testing
@@ -273,9 +320,9 @@ macOS or `apt install shellcheck` on Debian/Ubuntu).
 
 **MIT License** – [View Details](LICENSE)
 
-- **[GitHub Repository](https://github.com/manooll/Lean_Mac)**
-- **[Latest Release](https://github.com/manooll/Lean_Mac/releases/latest)**
-- **[Report Issues](https://github.com/manooll/Lean_Mac/issues)**
+- **[GitHub Repository](https://github.com/realnoedelo/Lean_Mac)**
+- **[Latest Release](https://github.com/realnoedelo/Lean_Mac/releases/latest)**
+- **[Report Issues](https://github.com/realnoedelo/Lean_Mac/issues)**
 
 ---
 

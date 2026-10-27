@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# macOS Tahoe 26.0 Service Restore Script
-# Version: 1.0 - Companion to Bloat Service Disabler
+# macOS Tahoe 26/27 Service Restore Script
+# Version: 1.1 - Companion to Bloat Service Disabler
 # Purpose: Restore all services and functionality disabled by the bloat disabler
 #
 # This script will:
@@ -9,21 +9,30 @@
 # - Restore Spotlight indexing
 # - Provide system health verification
 #
-# Author: Jay L. [Manull]
+# Maintainer: realnoedelo
 # License: MIT
-# Repository: https://github.com/manooll/Lean_Mac
+# Repository: https://github.com/realnoedelo/Lean_Mac
 
 set -euo pipefail
 
-LOG_FILE="$HOME/Library/Logs/restore_macos_services.log"
+if [ "$EUID" -eq 0 ]; then
+    LOG_FILE="/var/log/restore_macos_services.log"
+else
+    LOG_FILE="${HOME:?}/Library/Logs/restore_macos_services.log"
+fi
 # Ensure log directory exists
 mkdir -p "$(dirname "$LOG_FILE")"
-SCRIPT_VERSION="1.0"
+SCRIPT_VERSION="1.1"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 # Performance tracking variables
 SERVICES_ENABLED=0
 SERVICES_FAILED=0
+ASSUME_YES=false
+
+if [ "${1:-}" = "--yes" ] || [ "${1:-}" = "-y" ]; then
+    ASSUME_YES=true
+fi
 
 # Same service lists as the bloat disabler (for restoration)
 AI_SERVICES=(
@@ -34,6 +43,11 @@ AI_SERVICES=(
     "com.apple.knowledgeconstructiond"
     "com.apple.privatecloudcomputed"
     "com.apple.TGOnDeviceInferenceProviderService"
+    "com.apple.visualintelligenced"
+    "com.apple.visualintelligence.daemon-status"
+    "com.apple.uiintelligencesupport.agent"
+    "com.apple.siriappintentsd"
+    "com.apple.sirisuggestions"
 )
 
 SPOTLIGHT_SERVICES=(
@@ -41,6 +55,9 @@ SPOTLIGHT_SERVICES=(
     "com.apple.spotlightknowledged"
     "com.apple.spotlightknowledged.updater"
     "com.apple.spotlightknowledged.importer"
+    "com.apple.managedcorespotlightd"
+    "com.apple.corespotlightd"
+    "com.apple.spotlightknowledged.updater.cachedelete"
 )
 
 AI_ML_SERVICES=(
@@ -87,6 +104,9 @@ TELEMETRY_SERVICES=(
     "com.apple.osanalytics.osanalyticshelper"
     "com.apple.audioanalyticsd"
     "com.apple.usbctelemetryd"
+    "com.apple.cloudtelemetryd"
+    "com.apple.osanalytics.diagnosticmonitor"
+    "com.apple.analyticsd.agent"
 )
 
 MEDIA_SERVICES=(
@@ -116,11 +136,39 @@ ADOBE_SERVICES=(
 ALL_USER_SERVICES=("${AI_SERVICES[@]}" "${SPOTLIGHT_SERVICES[@]}" "${AI_ML_SERVICES[@]}" "${SIRI_SERVICES[@]}" "${ICLOUD_SERVICES[@]}" "${TELEMETRY_SERVICES[@]}" "${MEDIA_SERVICES[@]}" "${SOCIAL_SERVICES[@]}" "${ADOBE_SERVICES[@]}")
 
 ALL_SYSTEM_SERVICES=("${TELEMETRY_SERVICES[@]}" "${ADOBE_SERVICES[@]}")
+ALL_SYSTEM_SERVICES+=(
+    "com.apple.icloud.findmydeviced"
+    "com.apple.findmy.findmylocateagent"
+    "com.apple.findmymacd"
+    "com.apple.findmymacmessenger"
+    "com.apple.osanalytics.osanalyticshelper"
+    "com.apple.diagnosticservicesd"
+    "com.apple.ecosystemanalyticsd"
+    "com.apple.audioanalyticsd"
+)
 
 # --- Utility Functions ---
 
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+    local line
+    line="$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    printf '%s\n' "$line" >> "$LOG_FILE"
+    if [ -t 1 ]; then
+        printf '%s\n' "$line"
+    fi
+}
+
+get_gui_uids() {
+    local console_user console_uid sudo_uid
+    console_user=$(stat -f '%Su' /dev/console 2>/dev/null || true)
+    if [ -n "$console_user" ] && [ "$console_user" != "root" ]; then
+        console_uid=$(id -u "$console_user" 2>/dev/null || true)
+        [ -n "$console_uid" ] && printf '%s\n' "$console_uid"
+    fi
+    if [ -n "${SUDO_USER:-}" ]; then
+        sudo_uid=$(id -u "$SUDO_USER" 2>/dev/null || true)
+        [ -n "$sudo_uid" ] && printf '%s\n' "$sudo_uid"
+    fi
 }
 
 # Function to capture system performance metrics
@@ -129,19 +177,23 @@ capture_performance_metrics() {
     log_message "📊 PERFORMANCE METRICS ($label):"
     
     # CPU usage snapshot
-    local cpu_usage=$(top -l 1 -s 0 | grep "CPU usage" | head -1 || true)
+    local cpu_usage
+    cpu_usage=$(top -l 1 -s 0 | grep "CPU usage" | head -1 || true)
     log_message "CPU: $cpu_usage"
     
     # Memory usage
-    local memory_info=$(vm_stat | head -5 | tr '\n' ' ' || true)
+    local memory_info
+    memory_info=$(vm_stat | head -5 | tr '\n' ' ' || true)
     log_message "Memory: $memory_info"
     
     # Process count
-    local proc_count=$(ps aux | wc -l || true)
+    local proc_count
+    proc_count=$(ps aux | wc -l || true)
     log_message "Process count: $proc_count"
     
     # Disk space
-    local disk_usage=$(df -h / | tail -1 | awk '{print "Used: "$3" Available: "$4" ("$5" full)"}' || true)
+    local disk_usage
+    disk_usage=$(df -h / | tail -1 | awk '{print "Used: "$3" Available: "$4" ("$5" full)"}' || true)
     log_message "Disk: $disk_usage"
 }
 
@@ -150,32 +202,20 @@ enable_service() {
     local service_name="$1"
     local enabled=false
     
-    # Get all logged-in users
-    for user_id in $(ps -axo uid,comm | grep loginwindow | awk '{print $1}' | sort -u || true); do
+    # Check the active console user and the sudo caller's GUI domains.
+    for user_id in $(get_gui_uids | sort -u); do
         if [[ "$user_id" =~ ^[0-9]+$ ]] && [ "$user_id" -ge 500 ]; then
             # Try to enable for this user
             if launchctl enable "gui/$user_id/$service_name" 2>/dev/null; then
                 log_message "✅ ENABLED: $service_name (UID: $user_id)"
                 enabled=true
-                ((SERVICES_ENABLED++))
+                ((SERVICES_ENABLED+=1))
             else
                 log_message "❌ FAILED TO ENABLE: $service_name (UID: $user_id)"
-                ((SERVICES_FAILED++))
+                ((SERVICES_FAILED+=1))
             fi
         fi
     done
-    
-    # Also try current user context if running as user
-    if [ "$EUID" -ne 0 ]; then
-        if launchctl enable "gui/$(id -u)/$service_name" 2>/dev/null; then
-            log_message "✅ ENABLED: $service_name (current user)"
-            enabled=true
-            ((SERVICES_ENABLED++))
-        else
-            log_message "❌ FAILED TO ENABLE: $service_name (current user)"
-            ((SERVICES_FAILED++))
-        fi
-    fi
     
     if [ "$enabled" = false ]; then
         log_message "ℹ️  NOT FOUND OR ALREADY ENABLED: $service_name"
@@ -188,15 +228,19 @@ enable_system_service() {
     
     if sudo launchctl enable "system/$service_name" 2>/dev/null; then
         log_message "🟢 SYSTEM ENABLED: $service_name"
-        ((SERVICES_ENABLED++))
+        ((SERVICES_ENABLED+=1))
     else
         log_message "❌ SYSTEM FAILED TO ENABLE: $service_name"
-        ((SERVICES_FAILED++))
+        ((SERVICES_FAILED+=1))
     fi
 }
 
 # Function to verify user really wants to restore
 confirm_restore() {
+    if [ "$ASSUME_YES" = true ]; then
+        log_message "✅ Restoration confirmed by caller (--yes)"
+        return 0
+    fi
     echo
     echo "=========================================="
     echo "⚠️  macOS Service Restoration Warning"
@@ -212,7 +256,7 @@ confirm_restore() {
     echo
     echo "⚠️  WARNING: This will restore the 'bloat' and may impact performance!"
     echo
-    read -p "Are you sure you want to proceed? (type 'RESTORE' to confirm): " confirm
+    read -r -p "Are you sure you want to proceed? (type 'RESTORE' to confirm): " confirm
     
     if [ "$confirm" != "RESTORE" ]; then
         log_message "❌ Restoration cancelled by user"
@@ -240,7 +284,8 @@ stop_bloat_disabler() {
     fi
     
     # Kill any running bloat disabler processes
-    local pids=$(pgrep -f "disable_bloat_services" 2>/dev/null)
+    local pids
+    pids=$(pgrep -f "disable_bloat_services" 2>/dev/null || true)
     for pid in $pids; do
         if kill -9 "$pid" 2>/dev/null; then
             log_message "💀 Killed bloat disabler process (PID: $pid)"
@@ -262,7 +307,7 @@ log_success_rate() {
 # --- Core Execution ---
 
 log_message "=========================================="
-log_message "macOS Tahoe 26.0 Service Restoration v$SCRIPT_VERSION"
+log_message "macOS Tahoe 26/27 Service Restoration v$SCRIPT_VERSION"
 log_message "=========================================="
 log_message "System: $(sw_vers -productName) $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
 log_message "User: $(whoami), UID: $(id -u)"
@@ -329,9 +374,10 @@ check_services=("com.apple.assistantd" "com.apple.cloudd" "com.apple.corespotlig
 enabled_count=0
 
 for svc in "${check_services[@]}"; do
-    if launchctl print "gui/$(id -u)" 2>/dev/null | grep -q "$svc" 2>/dev/null; then
+    gui_services_output=$(launchctl print "gui/$(id -u)" 2>/dev/null || true)
+    if [[ "$gui_services_output" == *"$svc"* ]]; then
         log_message "✅ VERIFIED: $svc is enabled"
-        ((enabled_count++))
+        ((enabled_count+=1))
     else
         log_message "⚠️  NOT VERIFIED: $svc may not be enabled"
     fi
@@ -348,7 +394,7 @@ log_message "=========================================="
 log_message "🟢 Services enabled: $SERVICES_ENABLED | Failed: $SERVICES_FAILED"
 log_message "✅ Spotlight indexing restored on all volumes"
 
-log_message "🔍 Key services verified: $enabled_count/$(echo ${#check_services[@]})"
+log_message "🔍 Key services verified: $enabled_count/${#check_services[@]}"
 
 # Calculate success rate
 log_success_rate "$SERVICES_ENABLED" "$SERVICES_FAILED"
